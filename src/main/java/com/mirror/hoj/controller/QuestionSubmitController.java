@@ -42,14 +42,13 @@ public class QuestionSubmitController {
      *
      * @param questionSubmitAddRequest
      * @param request
-     * @return resultNum 本次点赞变化数
      */
     @PostMapping("/")
     public BaseResponse<Long> doQuestionSubmit(@RequestBody QuestionSubmitAddRequest questionSubmitAddRequest, HttpServletRequest request) {
         if (questionSubmitAddRequest == null || questionSubmitAddRequest.getQuestionId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        // 登录才能点赞
+        // 登录才能提交
         final User loginUser = userService.getLoginUser(request);
         long questionId = questionSubmitAddRequest.getQuestionId();
         long result = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
