@@ -101,3 +101,8 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.mirror.hoj.controller
+
+# 代码沙箱配置
+codesandbox:
+  type: example
+
