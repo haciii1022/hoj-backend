@@ -19,9 +19,9 @@ public class CodeSandboxFactory {
         //TODO 后续可以改成常量类
         //单例模式
         switch (type) {
-            case "remote":
+            case CodeSandboxConstant.REMOTE:
                 return  RemoteCodeSandbox.getInstance();
-            case "thirdParty":
+            case CodeSandboxConstant.THIRD_PARTY:
                 return  ThirdPartyCodeSandbox.getInstance();
             default:
                 return ExampleCodeSandbox.getInstance();

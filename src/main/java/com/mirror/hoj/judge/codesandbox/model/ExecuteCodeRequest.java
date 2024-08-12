@@ -27,11 +27,11 @@ public class ExecuteCodeRequest {
      * 时间限制
      * 单位ms
      */
-    private Integer timeLimit = 30000;//没传时间限制的话就默认30s超时
+    private Long timeLimit = 30000L;//没传时间限制的话就默认30s超时
 
     /**
      * 内存限制
      * 单位MB
      */
-    private Integer memoryLimit = 5120;//没传内存限制的话就默认512M内存
+    private Long memoryLimit = 5120L;//没传内存限制的话就默认512M内存
 }
