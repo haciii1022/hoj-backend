@@ -12,17 +12,23 @@ import com.mirror.hoj.judge.codesandbox.model.ExecuteCodeResponse;
  */
 public class RemoteCodeSandbox implements CodeSandbox {
     // 静态变量保存类的唯一实例
-    private static RemoteCodeSandbox instance;
+    private static volatile RemoteCodeSandbox instance;
 
     // 私有构造函数防止外部实例化
     private RemoteCodeSandbox() {
     }
 
-    // 提供一个静态方法来获取实例
+    /**
+     * 单例模式，双重检查锁定
+     * 为了在确保线程安全的同时，尽可能减少同步的开销，提高程序的性能。
+     * @return
+     */
     public static RemoteCodeSandbox getInstance() {
+        //先过滤掉不需要的请求，因为同步块的开销比较大
         if (instance == null) {
             synchronized (RemoteCodeSandbox.class) {
                 if (instance == null) {
+                    //加上volatile关键字，保证instance在所有线程中同步
                     instance = new RemoteCodeSandbox();
                 }
             }
