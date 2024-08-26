@@ -1,6 +1,6 @@
 package com.mirror.hoj.judge.strategy;
 
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
+import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
 
 /**
  * 判题策略

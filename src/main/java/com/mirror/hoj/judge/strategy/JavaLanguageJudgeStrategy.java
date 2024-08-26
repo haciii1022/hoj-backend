@@ -3,7 +3,7 @@ package com.mirror.hoj.judge.strategy;
 import cn.hutool.json.JSONUtil;
 import com.mirror.hoj.model.dto.question.JudgeCase;
 import com.mirror.hoj.model.dto.question.JudgeConfig;
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
+import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
 import com.mirror.hoj.model.entity.Question;
 import com.mirror.hoj.model.enums.JudgeInfoMessageEnum;
 
@@ -35,13 +35,13 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
         judgeInfoResult.setTime(executeTime);
         judgeInfoResult.setMemory(executeMemory);
         //判断是否超时,java默认是两倍
-        if (executeTime > judgeConfig.getTimeLimit()*2) {
+        if (executeTime > judgeConfig.getTimeLimit() * 2) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
             judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
             return judgeInfoResult;
         }
         //判断是否超内存，java默认是两倍
-        if (executeMemory > judgeConfig.getMemoryLimit()*2) {
+        if (executeMemory > judgeConfig.getMemoryLimit() * 2) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED;
             judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
             return judgeInfoResult;

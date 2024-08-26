@@ -4,7 +4,7 @@ import com.mirror.hoj.judge.strategy.DefaultJudgeStrategy;
 import com.mirror.hoj.judge.strategy.JavaLanguageJudgeStrategy;
 import com.mirror.hoj.judge.strategy.JudgeContext;
 import com.mirror.hoj.judge.strategy.JudgeStrategy;
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
+import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
 import com.mirror.hoj.model.entity.QuestionSubmit;
 import org.springframework.stereotype.Service;
 

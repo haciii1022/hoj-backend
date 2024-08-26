@@ -1,7 +1,7 @@
 package com.mirror.hoj.model.vo;
 
 import cn.hutool.json.JSONUtil;
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
+import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
 import com.mirror.hoj.model.entity.QuestionSubmit;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;

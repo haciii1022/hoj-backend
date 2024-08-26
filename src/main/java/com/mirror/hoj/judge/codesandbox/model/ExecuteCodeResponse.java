@@ -1,6 +1,5 @@
 package com.mirror.hoj.judge.codesandbox.model;
 
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

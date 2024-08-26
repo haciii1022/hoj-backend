@@ -11,7 +11,7 @@ import com.mirror.hoj.judge.codesandbox.model.ExecuteCodeResponse;
 import com.mirror.hoj.judge.strategy.JudgeContext;
 import com.mirror.hoj.model.dto.question.JudgeCase;
 import com.mirror.hoj.model.dto.question.JudgeConfig;
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
+import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
 import com.mirror.hoj.model.entity.Question;
 import com.mirror.hoj.model.entity.QuestionSubmit;
 import com.mirror.hoj.model.enums.JudgeInfoMessageEnum;

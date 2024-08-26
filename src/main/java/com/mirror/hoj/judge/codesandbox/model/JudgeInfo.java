@@ -1,4 +1,4 @@
-package com.mirror.hoj.model.dto.questionSubmit;
+package com.mirror.hoj.judge.codesandbox.model;
 
 import lombok.Data;
 

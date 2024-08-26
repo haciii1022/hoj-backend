@@ -1,7 +1,7 @@
 package com.mirror.hoj.judge.strategy;
 
 import com.mirror.hoj.model.dto.question.JudgeCase;
-import com.mirror.hoj.model.dto.questionSubmit.JudgeInfo;
+import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
 import com.mirror.hoj.model.entity.Question;
 import com.mirror.hoj.model.entity.QuestionSubmit;
 import lombok.Data;
