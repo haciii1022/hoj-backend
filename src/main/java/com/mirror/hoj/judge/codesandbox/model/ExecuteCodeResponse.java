@@ -16,7 +16,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ExecuteCodeResponse {
-
     private List<String> outputList;
 
     /**
@@ -30,8 +29,8 @@ public class ExecuteCodeResponse {
     private Integer status;
 
     /**
-     * 判题信息
+     * 对于每一个输入的判题信息
      */
-    private JudgeInfo judgeInfo;
+    private List<JudgeInfo> judgeInfoList;
 
 }

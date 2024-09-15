@@ -4,7 +4,6 @@ import com.mirror.hoj.judge.codesandbox.CodeSandbox;
 import com.mirror.hoj.judge.codesandbox.model.ExecuteCodeRequest;
 import com.mirror.hoj.judge.codesandbox.model.ExecuteCodeResponse;
 import com.mirror.hoj.judge.codesandbox.model.JudgeInfo;
-import com.mirror.hoj.model.enums.JudgeInfoMessageEnum;
 import com.mirror.hoj.model.enums.QuestionSubmitStatusEnum;
 
 import java.util.List;
@@ -52,10 +51,10 @@ public class ExampleCodeSandbox implements CodeSandbox {
         executeCodeResponse.setMessage("测试执行成功");
         executeCodeResponse.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
         JudgeInfo judgeInfo = new JudgeInfo();
-        judgeInfo.setMessage(JudgeInfoMessageEnum.ACCEPTED.getText());
-        judgeInfo.setMemory(100L);
-        judgeInfo.setTime(100L);
-        executeCodeResponse.setJudgeInfo(judgeInfo);
+//        judgeInfo.setMessage(JudgeInfoMessageEnum.ACCEPTED.getText());
+//        judgeInfo.setMemory(100L);
+//        judgeInfo.setTime(100L);
+//        executeCodeResponse.setJudgeInfo(judgeInfo);
         return executeCodeResponse;
     }
 

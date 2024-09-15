@@ -317,6 +317,7 @@ public class QuestionController {
 
         long current = questionSubmitQueryRequest.getCurrent();
         long size = questionSubmitQueryRequest.getPageSize();
+        log.info("listQuestionSubmitByPage入参: {}", questionSubmitQueryRequest);
         //从数据库中得到了原始的题目提交分页信息
         Page<QuestionSubmit> questionSubmitPage = questionSubmitService.page(new Page<>(current, size),
                 questionSubmitService.getQueryWrapper(questionSubmitQueryRequest));

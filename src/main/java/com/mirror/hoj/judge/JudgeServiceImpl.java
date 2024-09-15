@@ -85,10 +85,11 @@ public class JudgeServiceImpl implements JudgeService {
                 .timeLimit(judgeConfig.getTimeLimit())
                 .memoryLimit(judgeConfig.getMemoryLimit())
                 .build();
+        //TODO 这里的ExecuteCodeResponse要修改一下，和沙箱的对齐
         ExecuteCodeResponse executeCodeResponse = codeSandbox.executeCode(executeCodeRequest);
         //根据沙箱的执行结果，设置题目的判题状态和信息
         JudgeContext judgeContext = new JudgeContext();
-        judgeContext.setJudgeInfo(executeCodeResponse.getJudgeInfo());
+        judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
         judgeContext.setQuestion(question);
         judgeContext.setQuestionSubmit(questionSubmit);
         judgeContext.setOutputList(executeCodeResponse.getOutputList());

@@ -16,8 +16,9 @@ import java.util.List;
  */
 @Data
 public class JudgeContext {
-
     private JudgeInfo judgeInfo;
+
+    private List<JudgeInfo> judgeInfoList;
 
     private List<String> inputList;
 

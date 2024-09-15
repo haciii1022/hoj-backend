@@ -25,6 +25,9 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
         List<String> inputList = judgeContext.getInputList();
         List<JudgeCase> judgeCaseList = judgeContext.getJudgeCaseList();
         JudgeInfo judgeInfo = judgeContext.getJudgeInfo();
+        judgeInfo = new JudgeInfo();
+        judgeInfo.setTime(500L);
+        judgeInfo.setMemory(1024L);
         JudgeConfig judgeConfig = JSONUtil.toBean(judgeConfigStr, JudgeConfig.class);
         Long executeTime = judgeInfo.getTime();
         Long executeMemory = judgeInfo.getMemory();
