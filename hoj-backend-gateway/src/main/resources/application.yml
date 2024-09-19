@@ -1,0 +1,25 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      routes:
+        - id: yuoj-backend-user-service
+          uri: lb://yuoj-backend-user-service
+          predicates:
+            - Path=/api/user/**
+        - id: yuoj-backend-question-service
+          uri: lb://yuoj-backend-question-service
+          predicates:
+            - Path=/api/question/**
+        - id: yuoj-backend-judge-service
+          uri: lb://yuoj-backend-judge-service
+          predicates:
+            - Path=/api/judge/**
+  application:
+    name: yuoj-backend-gateway
+  main:
+    web-application-type: reactive
+server:
+  port: 8101
