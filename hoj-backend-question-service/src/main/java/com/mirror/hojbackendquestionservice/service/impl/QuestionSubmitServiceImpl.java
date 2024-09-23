@@ -17,6 +17,7 @@ import com.mirror.hojbackendmodel.model.enums.QuestionSubmitLanguageEnum;
 import com.mirror.hojbackendmodel.model.enums.QuestionSubmitStatusEnum;
 import com.mirror.hojbackendmodel.model.vo.QuestionSubmitVO;
 import com.mirror.hojbackendquestionservice.mapper.QuestionSubmitMapper;
+import com.mirror.hojbackendquestionservice.rabbitmq.MyMessageProducer;
 import com.mirror.hojbackendquestionservice.service.QuestionService;
 import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.JudgeFeignClient;
@@ -28,7 +29,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +48,9 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
     @Resource
     private UserFeignClient userService;
+
+    @Resource
+    private MyMessageProducer myMessageProducer;
     /**
      * 题目提交
      *
@@ -84,10 +87,11 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目提交失败");
         }
         Long questionSubmitId = questionSubmit.getId();
-        CompletableFuture.runAsync(() -> {
-            //TODO 异步执行判题
-            judgeService.doJudge(questionSubmitId);
-        });
+        myMessageProducer.sendMessage("code_exchange", "my_routingKey", String.valueOf(questionSubmitId));
+//        CompletableFuture.runAsync(() -> {
+//            //TODO 异步执行判题
+//            judgeService.doJudge(questionSubmitId);
+//        });
         return questionSubmitId;
     }
 

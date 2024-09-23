@@ -82,22 +82,33 @@ public class JudgeServiceImpl implements JudgeService {
                 .memoryLimit(judgeConfig.getMemoryLimit())
                 .build();
         //TODO 这里的ExecuteCodeResponse要修改一下，和沙箱的对齐
+        JudgeInfo judgeInfo;
         ExecuteCodeResponse executeCodeResponse = codeSandbox.executeCode(executeCodeRequest);
-        //根据沙箱的执行结果，设置题目的判题状态和信息
-        JudgeContext judgeContext = new JudgeContext();
-        judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
-        judgeContext.setQuestion(question);
-        judgeContext.setQuestionSubmit(questionSubmit);
-        judgeContext.setOutputList(executeCodeResponse.getOutputList());
-        judgeContext.setJudgeCaseList(judgeCaseList);
-        judgeContext.setInputList(inputList);
-        JudgeInfo judgeInfo = judgeManager.doJudge(judgeContext);
-        //在数据库中更新判题状态
-        if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getValue())) {
-            questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
-        } else {
-            questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
+        //如果沙箱执行失败，直接返回
+        if(Objects.equals(executeCodeResponse.getStatus(), QuestionSubmitStatusEnum.FAILED.getValue())) {
+            judgeInfo = new JudgeInfo();
+            if ("编译错误".equals(executeCodeResponse.getMessage())) {
+                questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
+                judgeInfo.setMessage(JudgeInfoMessageEnum.COMPILE_ERROR.getValue());
+            }
+        }else{
+            //根据沙箱的执行结果，设置题目的判题状态和信息
+            JudgeContext judgeContext = new JudgeContext();
+            judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
+            judgeContext.setQuestion(question);
+            judgeContext.setQuestionSubmit(questionSubmit);
+            judgeContext.setOutputList(executeCodeResponse.getOutputList());
+            judgeContext.setJudgeCaseList(judgeCaseList);
+            judgeContext.setInputList(inputList);
+            judgeInfo = judgeManager.doJudge(judgeContext);
+            //在数据库中更新判题状态
+            if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getValue())) {
+                questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+            } else {
+                questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
+            }
         }
+
         questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
         System.out.println("judgeInfo = " + judgeInfo);
         System.out.println("questionSubmitUpdate = " + questionSubmitUpdate);

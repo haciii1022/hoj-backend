@@ -30,7 +30,12 @@ spring:
       host: localhost
       port: 6379
       timeout: 5000
-  #    password: 123456
+    #    password: 123456
+  rabbitmq:
+    host: localhost
+    port: 5672
+    password: guest
+    username: guest
   # 文件上传
   servlet:
     multipart:
@@ -45,6 +50,7 @@ server:
     session:
       cookie:
         max-age: 2592000
+        path: /api
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
@@ -54,5 +60,5 @@ mybatis-plus:
       logic-delete-field: isDelete # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
-
-
+knife4j:
+  enable: true

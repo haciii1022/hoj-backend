@@ -1,4 +1,4 @@
-package com.mirror.hojbackendjudgeservice.judge.codesandbox.controller.inner;
+package com.mirror.hojbackendjudgeservice.controller.inner;
 
 import com.mirror.hojbackendjudgeservice.judge.JudgeService;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
