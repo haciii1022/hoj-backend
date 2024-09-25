@@ -1,0 +1,32 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos:8848 # localhost 改为 nacos
+    gateway:
+      routes:
+        - id: hoj-backend-user-service
+          uri: lb://hoj-backend-user-service
+          predicates:
+            - Path=/api/user/**
+        - id: hoj-backend-question-service
+          uri: lb://hoj-backend-question-service
+          predicates:
+            - Path=/api/question/**
+        - id: hoj-backend-judge-service
+          uri: lb://hoj-backend-judge-service
+          predicates:
+            - Path=/api/judge/**
+  application:
+    name: hoj-backend-gateway
+  main:
+    web-application-type: reactive
+server:
+  port: 8101
+knife4j:
+  gateway:
+    enabled: true
+    strategy: discover
+    discover:
+      enabled: true
+      version: swagger2

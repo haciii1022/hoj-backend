@@ -1,6 +1,5 @@
 package com.mirror.hojbackendjudgeservice;
 
-import com.mirror.hojbackendjudgeservice.rabbitmq.InitRabbitMq;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -20,7 +19,6 @@ public class HojBackendJudgeServiceApplication {
 
     public static void main(String[] args) {
         //初始化消息队列
-        InitRabbitMq.init();
         SpringApplication.run(HojBackendJudgeServiceApplication.class, args);
     }
 

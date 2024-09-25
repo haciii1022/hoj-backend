@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
  */
 public enum JudgeInfoMessageEnum {
 
-    ACCEPTED("Accepted", "成功"),
+    ACCEPTED("Accepted", "答案正确"),
     WRONG_ANSWER("Wrong Answer", "答案错误"),
     COMPILE_ERROR("Compile Error", "编译错误"),
     MEMORY_LIMIT_EXCEEDED("Memory Limit Exceeded", "内存溢出"),
@@ -27,6 +27,7 @@ public enum JudgeInfoMessageEnum {
     private final String text;
 
     private final String value;
+
 
     JudgeInfoMessageEnum(String text, String value) {
         this.text = text;

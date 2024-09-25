@@ -42,20 +42,20 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
         //判断是否超时,java默认是两倍
         if (maxExecuteTime > judgeConfig.getTimeLimit() * 2) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
-            judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+            judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //判断是否超内存，java默认是两倍
         //左边是B，右边是KB
         if (maxExecuteMemory > judgeConfig.getMemoryLimit() * 1024) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED;
-            judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+            judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //输出个数不同，直接返回错误
         if (outputList.size() != inputList.size()) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
-            judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+            judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //依次比对每一项输出和预期输出
@@ -64,11 +64,11 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
                 System.out.println("outputList.get(i): " + outputList.get(i));
                 System.out.println("judgeCaseList.get(i).getOutput(): " + judgeCaseList.get(i).getOutput());
                 judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
-                judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+                judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
                 return judgeInfoResult;
             }
         }
-        judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+        judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
         return judgeInfoResult;
     }
 }

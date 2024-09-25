@@ -87,9 +87,9 @@ public class JudgeServiceImpl implements JudgeService {
         //如果沙箱执行失败，直接返回
         if(Objects.equals(executeCodeResponse.getStatus(), QuestionSubmitStatusEnum.FAILED.getValue())) {
             judgeInfo = new JudgeInfo();
-            if ("编译错误".equals(executeCodeResponse.getMessage())) {
+            if (executeCodeResponse.getMessage().equals(JudgeInfoMessageEnum.COMPILE_ERROR.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
-                judgeInfo.setMessage(JudgeInfoMessageEnum.COMPILE_ERROR.getValue());
+                judgeInfo.setMessage(JudgeInfoMessageEnum.COMPILE_ERROR.getText());
             }
         }else{
             //根据沙箱的执行结果，设置题目的判题状态和信息
@@ -102,7 +102,7 @@ public class JudgeServiceImpl implements JudgeService {
             judgeContext.setInputList(inputList);
             judgeInfo = judgeManager.doJudge(judgeContext);
             //在数据库中更新判题状态
-            if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getValue())) {
+            if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
             } else {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
