@@ -10,5 +10,8 @@ ADD target/hoj-backend-judge-service-0.0.1-SNAPSHOT.jar .
 # 暴露端口
 EXPOSE 8103
 
+# 设置 JVM 参数
+ENV JAVA_OPTS="-Xmx256m -Xms64m"
+
 # 启动命令
-ENTRYPOINT ["java","-jar","/app/hoj-backend-judge-service-0.0.1-SNAPSHOT.jar","--spring.profiles.active=prod"]
+ENTRYPOINT ["java","${JAVA_OPTS}","-jar","/app/hoj-backend-judge-service-0.0.1-SNAPSHOT.jar","--spring.profiles.active=prod"]

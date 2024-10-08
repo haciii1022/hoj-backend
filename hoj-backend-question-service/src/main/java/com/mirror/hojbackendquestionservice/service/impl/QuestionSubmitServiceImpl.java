@@ -65,6 +65,10 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (question == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
+        Question questionUpdate = new Question();
+        questionUpdate.setId(question.getId());
+        questionUpdate.setSubmitNum(question.getSubmitNum() + 1);
+        questionService.updateById(questionUpdate);
         //TODO 判断编程语言是否合法
         String language = questionSubmitAddRequest.getLanguage();
         QuestionSubmitLanguageEnum languageEnum = QuestionSubmitLanguageEnum.getEnumByValue(language);

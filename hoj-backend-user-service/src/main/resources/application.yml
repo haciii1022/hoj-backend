@@ -18,6 +18,9 @@ spring:
     nacos:
       discovery:
         server-addr: localhost:8848
+#        server-addr: 47.115.53.171:8745
+        username: nacos
+        password: nacos
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

@@ -9,6 +9,7 @@ import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.QuestionFeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -50,5 +51,11 @@ public class QuestionInnerController implements QuestionFeignClient {
     @PostMapping("/question_submit/update")
     public boolean updateQuestionSubmitById(QuestionSubmit questionSubmit) {
         return questionSubmitService.updateById(questionSubmit);
+    }
+
+    @Override
+    @PostMapping("/update")
+    public boolean updateQuestion(@RequestBody Question question){
+        return questionService.updateById(question);
     }
 }

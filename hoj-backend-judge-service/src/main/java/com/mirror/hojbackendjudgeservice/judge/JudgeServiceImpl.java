@@ -17,6 +17,7 @@ import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.enums.JudgeInfoMessageEnum;
 import com.mirror.hojbackendmodel.model.enums.QuestionSubmitStatusEnum;
 import com.mirror.hojbackendserverclient.service.QuestionFeignClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
  * @author Mirror
  * @date 2024/8/5
  */
+@Slf4j
 @Service
 public class JudgeServiceImpl implements JudgeService {
     @Resource
@@ -90,6 +92,9 @@ public class JudgeServiceImpl implements JudgeService {
             if (executeCodeResponse.getMessage().equals(JudgeInfoMessageEnum.COMPILE_ERROR.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
                 judgeInfo.setMessage(JudgeInfoMessageEnum.COMPILE_ERROR.getText());
+            }else{
+                questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
+                judgeInfo.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
             }
         }else{
             //根据沙箱的执行结果，设置题目的判题状态和信息
@@ -104,15 +109,23 @@ public class JudgeServiceImpl implements JudgeService {
             //在数据库中更新判题状态
             if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+                Question questionUpdate = new Question();
+                questionUpdate.setId(questionId);
+                questionUpdate.setAcceptedNum(question.getAcceptedNum() + 1);
+                boolean b = questionFeignClient.updateQuestion(questionUpdate);
+                if (!b) {
+                    log.error("题目通过数更新失败");
+//                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新题目信息错误");
+                }
             } else {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
             }
         }
 
         questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
-        System.out.println("judgeInfo = " + judgeInfo);
-        System.out.println("questionSubmitUpdate = " + questionSubmitUpdate);
-        System.out.println(JSONUtil.toJsonStr(judgeInfo));
+//        System.out.println("judgeInfo = " + judgeInfo);
+//        System.out.println("questionSubmitUpdate = " + questionSubmitUpdate);
+//        System.out.println(JSONUtil.toJsonStr(judgeInfo));
         update = questionFeignClient.updateQuestionSubmitById(questionSubmitUpdate);
         if (!update) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目状态更新错误");
