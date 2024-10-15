@@ -21,6 +21,9 @@ public class InitRabbitMq {
     @Value("${spring.rabbitmq.host}")
     private String host;
 
+    @Value("${spring.rabbitmq.port}")
+    private int port;
+
     @Value("${spring.rabbitmq.username}")
     private String userName;
 
@@ -34,8 +37,7 @@ public class InitRabbitMq {
             factory.setHost(host);
             factory.setUsername(userName);
             factory.setPassword(password);
-            factory.setPort(5672);
-//            factory.setHost("47.115.53.171");
+            factory.setPort(port);
             Connection connection = factory.newConnection();
             Channel channel = connection.createChannel();
             String EXCHANGE_NAME = "code_exchange";
@@ -50,7 +52,4 @@ public class InitRabbitMq {
             log.error("初始化rabbitmq失败", e);
         }
     }
-//    public static void main(String[] args) {
-//        init();
-//    }
 }
