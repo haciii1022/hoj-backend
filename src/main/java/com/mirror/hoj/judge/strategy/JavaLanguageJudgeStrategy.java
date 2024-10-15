@@ -24,27 +24,29 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
         String judgeConfigStr = question.getJudgeConfig();
         List<String> inputList = judgeContext.getInputList();
         List<JudgeCase> judgeCaseList = judgeContext.getJudgeCaseList();
-        JudgeInfo judgeInfo = judgeContext.getJudgeInfo();
-        judgeInfo = new JudgeInfo();
-        judgeInfo.setTime(500L);
-        judgeInfo.setMemory(1024L);
+        List<JudgeInfo> judgeInfoList = judgeContext.getJudgeInfoList();
+        long maxExecuteTime = 0L;
+        long maxExecuteMemory = 0L;
+        for(JudgeInfo judgeInfo : judgeInfoList) {
+            maxExecuteTime = Math.max(maxExecuteTime, judgeInfo.getTime());
+            maxExecuteMemory = Math.max(maxExecuteMemory, judgeInfo.getMemory());
+        }
         JudgeConfig judgeConfig = JSONUtil.toBean(judgeConfigStr, JudgeConfig.class);
-        Long executeTime = judgeInfo.getTime();
-        Long executeMemory = judgeInfo.getMemory();
+
         //判断默认结果为通过
         JudgeInfoMessageEnum judgeInfoMessageEnum = JudgeInfoMessageEnum.ACCEPTED;
 
         JudgeInfo judgeInfoResult = new JudgeInfo();
-        judgeInfoResult.setTime(executeTime);
-        judgeInfoResult.setMemory(executeMemory);
+        judgeInfoResult.setTime(maxExecuteTime);
+        judgeInfoResult.setMemory(maxExecuteMemory);
         //判断是否超时,java默认是两倍
-        if (executeTime > judgeConfig.getTimeLimit() * 2) {
+        if (maxExecuteTime > judgeConfig.getTimeLimit() * 2) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
             judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
             return judgeInfoResult;
         }
         //判断是否超内存，java默认是两倍
-        if (executeMemory > judgeConfig.getMemoryLimit() * 2) {
+        if (maxExecuteMemory > judgeConfig.getMemoryLimit() * 2) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED;
             judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
             return judgeInfoResult;
@@ -63,7 +65,6 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
                 return judgeInfoResult;
             }
         }
-
         judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
         return judgeInfoResult;
     }
