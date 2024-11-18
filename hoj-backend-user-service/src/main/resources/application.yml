@@ -62,3 +62,12 @@ knife4j:
   enable: true
 
 
+
+aliyun:
+  oss:
+#    endpoint: oss-cn-shenzhen
+    endpoint: oss-cn-shenzhen.aliyuncs.com
+    bucketName: xxxxxx
+    accessKeyId: xxxxxxx
+    accessKeySecret: xxxxxxx
+

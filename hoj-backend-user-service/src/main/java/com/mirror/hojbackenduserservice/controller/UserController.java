@@ -1,5 +1,6 @@
 package com.mirror.hojbackenduserservice.controller;
 
+import com.aliyun.oss.OSS;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mirror.hojbackendcommon.annotation.AuthCheck;
 import com.mirror.hojbackendcommon.common.BaseResponse;
@@ -27,7 +28,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -38,6 +42,7 @@ import static com.mirror.hojbackenduserservice.service.impl.UserServiceImpl.SALT
 
 /**
  * 用户接口
+ *
  * @author Mirror.
  */
 @RestController
@@ -48,6 +53,8 @@ public class UserController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private OSS ossClient;
 
     /**
      * 用户注册
@@ -90,7 +97,6 @@ public class UserController {
         LoginUserVO loginUserVO = userService.userLogin(userAccount, userPassword, request);
         return ResultUtils.success(loginUserVO);
     }
-
 
 
     /**
@@ -175,7 +181,7 @@ public class UserController {
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest,
-            HttpServletRequest request) {
+                                            HttpServletRequest request) {
         if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -205,6 +211,20 @@ public class UserController {
     }
 
     /**
+     * 根据 session 获取当前用户信息
+     *
+     * @param request
+     * @return
+     */
+    @GetMapping("/get/my")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<User> getUserByRequest(HttpServletRequest request) {
+        User user = userService.getLoginUser(request);
+        ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR);
+        return ResultUtils.success(user);
+    }
+
+    /**
      * 根据 id 获取包装类
      *
      * @param id
@@ -228,7 +248,7 @@ public class UserController {
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<User>> listUserByPage(@RequestBody UserQueryRequest userQueryRequest,
-            HttpServletRequest request) {
+                                                   HttpServletRequest request) {
         long current = userQueryRequest.getCurrent();
         long size = userQueryRequest.getPageSize();
         Page<User> userPage = userService.page(new Page<>(current, size),
@@ -245,7 +265,7 @@ public class UserController {
      */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest,
-            HttpServletRequest request) {
+                                                       HttpServletRequest request) {
         if (userQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -272,7 +292,7 @@ public class UserController {
      */
     @PostMapping("/update/my")
     public BaseResponse<Boolean> updateMyUser(@RequestBody UserUpdateMyRequest userUpdateMyRequest,
-            HttpServletRequest request) {
+                                              HttpServletRequest request) {
         if (userUpdateMyRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -283,5 +303,49 @@ public class UserController {
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
+    }
+
+
+    @PostMapping("/upload")
+    public BaseResponse<String> uploadFile(@RequestBody MultipartFile file) {
+        String originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
+        return ResultUtils.success(userService.uploadFile(file, null));
+    }
+
+    /**
+     * 更新头像(仅限当前登录用户更新)
+     *
+     * @param file
+     * @param originalUrl
+     * @param request
+     * @return
+     */
+    @PostMapping("/updateAvatar")
+    public BaseResponse<Boolean> updateUserAvatar(@RequestPart("file") MultipartFile file,
+                                                  @RequestPart(value = "originalUrl", required = false) String originalUrl,
+                                                  HttpServletRequest request) {
+//        String  originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
+        // 检查文件是否为空
+        ThrowUtils.throwIf(file.isEmpty(), ErrorCode.UNPROCESSABLE_ENTITY);
+
+        String originalFilename = null;
+        if (StringUtils.isNotBlank(originalUrl)) {
+            String[] split = originalUrl.split("/");
+            if (split.length > 0) {
+                originalFilename = split[split.length - 1];
+            }
+        }
+
+        String avatarResult = userService.uploadFile(file, originalFilename);
+        User loginUser = userService.getLoginUser(request);
+        loginUser.setUserAvatar(avatarResult);
+        boolean result = userService.updateById(loginUser);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(true);
+    }
+
+    @PostMapping("/deleteFile")
+    public BaseResponse<Boolean> deleteFile(@RequestParam("fileUrl") String fileUrl) {
+        return ResultUtils.success(userService.deleteFile(fileUrl));
     }
 }

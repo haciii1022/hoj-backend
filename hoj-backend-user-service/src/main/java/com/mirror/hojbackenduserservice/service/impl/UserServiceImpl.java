@@ -1,6 +1,9 @@
 package com.mirror.hojbackenduserservice.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.UUID;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.PutObjectResult;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mirror.hojbackendcommon.common.ErrorCode;
@@ -18,12 +21,17 @@ import com.mirror.hojbackenduserservice.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +42,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
+    @Resource
+    private OSS ossClient;
+
+    @Value("${aliyun.oss.bucketName}")
+    private String bucketName;
+
+    @Value("${aliyun.oss.endpoint}")
+    private String endpoint;
     /**
      * 盐值，混淆密码
      */
@@ -234,5 +250,47 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
+    }
+
+    @Override
+    public String uploadFile(MultipartFile file, String originalFilename) {
+        //获取原生文件名
+        String fileName = file.getOriginalFilename();
+        //拼装OSS上存储的路径
+//        String fileName = file.getName();
+        String extension = fileName.substring(fileName.lastIndexOf("."));
+        String contentType = file.getContentType();
+        //在OSS上bucket下的文件名
+        String finalFileName = Optional.ofNullable(originalFilename).orElse(String.valueOf(UUID.fastUUID()));
+        String uploadFileName = "hoj/user" + "/" + finalFileName + extension;
+        //获取文件后缀
+        try {
+            PutObjectResult result = ossClient.putObject(bucketName, uploadFileName, file.getInputStream());
+            //拼装返回路径
+            if (result != null) {
+                return "https://"+bucketName+"."+endpoint+"/"+uploadFileName;
+            }
+        } catch (IOException e) {
+            log.error("文件上传失败:{}",e.getMessage());
+        }
+        return "Yes";
+    }
+
+    @Override
+    public Boolean deleteFile(String fileUrl) {
+        boolean flag = true;
+        try {
+            String[] split = fileUrl.split("/");
+            String fileName = split[split.length - 1];
+            ossClient.deleteObject(bucketName, fileName);
+        }catch (Exception e){
+            log.error("文件删除失败:{}",e.getMessage());
+            flag = false;
+        }
+        finally {
+            //OSS关闭服务，不然会造成OOM
+            ossClient.shutdown();
+        }
+        return flag;
     }
 }

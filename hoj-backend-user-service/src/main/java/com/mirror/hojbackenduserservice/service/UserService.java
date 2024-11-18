@@ -6,6 +6,7 @@ import com.mirror.hojbackendmodel.model.dto.user.UserQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.User;
 import com.mirror.hojbackendmodel.model.vo.LoginUserVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -108,4 +109,13 @@ public interface UserService extends IService<User> {
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
 
+    /**
+     * 上传文件
+     * @param file 文件
+     * @param originalFilename 原文件名
+     * @return
+     */
+    String uploadFile(MultipartFile file, String originalFilename);
+
+    Boolean deleteFile(String fileUrl);
 }
