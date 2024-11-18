@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.CommonConstant;
+import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.utils.SqlUtils;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitAddRequest;
@@ -25,10 +26,12 @@ import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +54,9 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
     @Resource
     private MyMessageProducer myMessageProducer;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
     /**
      * 题目提交
      *
@@ -90,6 +96,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (!save) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目提交失败");
         }
+        redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit,3, TimeUnit.MINUTES);
         Long questionSubmitId = questionSubmit.getId();
         myMessageProducer.sendMessage("code_exchange", "my_routingKey", String.valueOf(questionSubmitId));
 //        CompletableFuture.runAsync(() -> {

@@ -2,6 +2,7 @@ package com.mirror.hojbackendjudgeservice.judge;
 
 import cn.hutool.json.JSONUtil;
 import com.mirror.hojbackendcommon.common.ErrorCode;
+import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendjudgeservice.judge.codesandbox.CodeSandbox;
 import com.mirror.hojbackendjudgeservice.judge.codesandbox.CodeSandboxFactory;
@@ -19,11 +20,13 @@ import com.mirror.hojbackendmodel.model.enums.QuestionSubmitStatusEnum;
 import com.mirror.hojbackendserverclient.service.QuestionFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +44,9 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Resource
     private JudgeManager judgeManager;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public QuestionSubmit doJudge(Long questionSubmitId) {
@@ -123,13 +129,13 @@ public class JudgeServiceImpl implements JudgeService {
         }
 
         questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
-//        System.out.println("judgeInfo = " + judgeInfo);
-//        System.out.println("questionSubmitUpdate = " + questionSubmitUpdate);
-//        System.out.println(JSONUtil.toJsonStr(judgeInfo));
         update = questionFeignClient.updateQuestionSubmitById(questionSubmitUpdate);
         if (!update) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目状态更新错误");
         }
-        return questionFeignClient.getQuestionSubmitById(questionSubmitId);
+        QuestionSubmit submit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
+        redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId,
+                submit,3, TimeUnit.MINUTES);
+        return submit;
     }
 }

@@ -1,5 +1,6 @@
 package com.mirror.hojbackendquestionservice.controller;
 
+import cn.hutool.core.lang.Assert;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mirror.hojbackendcommon.annotation.AuthCheck;
@@ -7,6 +8,7 @@ import com.mirror.hojbackendcommon.common.BaseResponse;
 import com.mirror.hojbackendcommon.common.DeleteRequest;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.common.ResultUtils;
+import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
@@ -28,18 +30,22 @@ import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 题目接口
+ *
  * @author Mirror.
  */
 @RestController
@@ -55,7 +61,9 @@ public class QuestionController {
 
     @Resource
     private QuestionSubmitService questionSubmitService;
-    // region 增删改查
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 创建
@@ -76,11 +84,11 @@ public class QuestionController {
             question.setTags(JSONUtil.toJsonStr(tags));
         }
         List<JudgeCase> judgeCase = questionAddRequest.getJudgeCase();
-        if(judgeCase!=null){
+        if (judgeCase != null) {
             question.setJudgeCase(JSONUtil.toJsonStr(judgeCase));
         }
         JudgeConfig judgeConfig = questionAddRequest.getJudgeConfig();
-        if(judgeConfig!=null){
+        if (judgeConfig != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(judgeConfig));
         }
         questionService.validQuestion(question, true);
@@ -140,11 +148,11 @@ public class QuestionController {
             question.setTags(JSONUtil.toJsonStr(tags));
         }
         List<JudgeCase> judgeCase = questionUpdateRequest.getJudgeCase();
-        if(judgeCase!=null){
+        if (judgeCase != null) {
             question.setJudgeCase(JSONUtil.toJsonStr(judgeCase));
         }
         JudgeConfig judgeConfig = questionUpdateRequest.getJudgeConfig();
-        if(judgeConfig!=null){
+        if (judgeConfig != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(judgeConfig));
         }
         // 参数校验
@@ -156,6 +164,7 @@ public class QuestionController {
         boolean result = questionService.updateById(question);
         return ResultUtils.success(result);
     }
+
     /**
      * 根据 id 获取
      *
@@ -172,11 +181,12 @@ public class QuestionController {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
         User loginUser = userFeignClient.getLoginUser(request);
-        if(!question.getUserId().equals(loginUser.getId())&&!userFeignClient.isAdmin(loginUser)) {
+        if (!question.getUserId().equals(loginUser.getId()) && !userFeignClient.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         return ResultUtils.success(question);
     }
+
     /**
      * 根据 id 获取（脱敏）
      *
@@ -220,7 +230,7 @@ public class QuestionController {
      */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<QuestionVO>> listQuestionVOByPage(@RequestBody QuestionQueryRequest questionQueryRequest,
-            HttpServletRequest request) {
+                                                               HttpServletRequest request) {
         long current = questionQueryRequest.getCurrent();
         long size = questionQueryRequest.getPageSize();
         // 限制爬虫
@@ -239,7 +249,7 @@ public class QuestionController {
      */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<QuestionVO>> listMyQuestionVOByPage(@RequestBody QuestionQueryRequest questionQueryRequest,
-            HttpServletRequest request) {
+                                                                 HttpServletRequest request) {
         if (questionQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -274,11 +284,11 @@ public class QuestionController {
             question.setTags(JSONUtil.toJsonStr(tags));
         }
         List<JudgeCase> judgeCase = questionEditRequest.getJudgeCase();
-        if(judgeCase!=null){
+        if (judgeCase != null) {
             question.setJudgeCase(JSONUtil.toJsonStr(judgeCase));
         }
         JudgeConfig judgeConfig = questionEditRequest.getJudgeConfig();
-        if(judgeConfig!=null){
+        if (judgeConfig != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(judgeConfig));
         }
         // 参数校验
@@ -309,6 +319,9 @@ public class QuestionController {
         }
         // 登录才能提交
         final User loginUser = userFeignClient.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
         long questionId = questionSubmitAddRequest.getQuestionId();
         long result = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
         return ResultUtils.success(result);
@@ -331,6 +344,25 @@ public class QuestionController {
         Page<QuestionSubmit> questionSubmitPage = questionSubmitService.page(new Page<>(current, size),
                 questionSubmitService.getQueryWrapper(questionSubmitQueryRequest));
         User loginUser = userFeignClient.getLoginUser(request);
-        return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage,loginUser));
+        return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage, loginUser));
+    }
+
+    /**
+     * 根据 id 获取题目判题信息
+     *
+     * @param questionSubmitId
+     * @return
+     */
+    @GetMapping("/question_submit")
+    public BaseResponse<QuestionSubmitVO> getQuestionSubmitById(@RequestParam("questionSubmitId") Long questionSubmitId) {
+        Assert.notNull(questionSubmitId, "提交id不能为空");
+        String key = RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId;
+        QuestionSubmit questionSubmit = (QuestionSubmit) redisTemplate.opsForValue().get(key);
+        if (questionSubmit == null) {
+            questionSubmit = questionSubmitService.getById(questionSubmitId);
+            redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit,3, TimeUnit.MINUTES);
+        }
+        questionSubmit.setCode(null);
+        return ResultUtils.success(QuestionSubmitVO.objToVo(questionSubmit));
     }
 }
