@@ -105,3 +105,79 @@ create table if not exists post_favour
     index idx_postId (postId),
     index idx_userId (userId)
 ) comment '帖子收藏';
+
+
+CREATE TABLE `sequence` (
+  `name` VARCHAR(50) NOT NULL,
+  `value` BIGINT NOT NULL,
+  `increment_step` INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (`name`)
+);
+
+CREATE PROCEDURE `nextval`(IN seq_name varchar(50), OUT next_value bigint)
+BEGIN
+
+  -- 启动事务
+  START TRANSACTION;
+
+  -- 更新序列值
+  UPDATE `sequence`
+  SET `value` = `value` + `increment_step`
+  WHERE `name` = seq_name;
+
+  -- 获取更新后的值
+  SELECT `value` INTO next_value
+  FROM `sequence`
+  WHERE `name` = seq_name;
+
+  -- 提交事务
+  COMMIT;
+end;
+
+
+CREATE PROCEDURE `curval`(IN seq_name varchar(50), OUT cur_value bigint)
+BEGIN
+
+
+  -- 获取更新后的值
+  SELECT `value` + `increment_step` INTO cur_value
+  FROM `sequence`
+  WHERE `name` = seq_name;
+
+end;
+
+
+
+create table if not exists judge_case_group
+(
+    id           bigint auto_increment comment 'id' primary key,
+    questionId   bigint                                 not null comment '题目 id',
+    userId       bigint                                 not null comment '创建用户 id',
+    createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint      default 0                 not null comment '是否删除',
+    index idx_questionId (questionId),
+    index idx_userId (userId)
+) comment '测试用例组' collate = utf8mb4_unicode_ci;
+
+
+create table if not exists judge_case_file
+(
+    id           bigint auto_increment comment 'id' primary key,
+    groupId      bigint                                 not null comment '测试用例组 id',
+    url          varchar(256)                           null comment '文件url',
+    type         tinyint                                not null comment '0:in 1:out',
+    fileName     varchar(128)                           null comment '文件名',
+    fileFolder   varchar(128)                           null comment '文件夹位置',
+    userId       bigint                                 not null comment '创建用户 id',
+    createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint      default 0                 not null comment '是否删除',
+    index idx_userId (userId)
+) comment '测试用例文件' collate = utf8mb4_unicode_ci;
+
+INSERT INTO sequence (name, value, increment_step)VALUES ('question_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+INSERT INTO sequence (name, value, increment_step)VALUES ('user_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+INSERT INTO sequence (name, value, increment_step)VALUES ('question_submit_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+INSERT INTO sequence (name, value, increment_step)VALUES ('judge_case_group_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+INSERT INTO sequence (name, value, increment_step)VALUES ('judge_case_file_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);

@@ -6,9 +6,9 @@ package com.mirror.hojbackendcommon.constant;
  */
 public interface FileConstant {
 
-    /**
-     * COS 访问地址
-     * todo 需替换配置
-     */
-    String COS_HOST = "https://yupi.icu";
+    String OSS_PREFIX = "hoj";
+
+    String USER_AVATAR_PREFIX = "hoj/user";
+
+    String QUESTION_PREFIX = "hoj/question";
 }
