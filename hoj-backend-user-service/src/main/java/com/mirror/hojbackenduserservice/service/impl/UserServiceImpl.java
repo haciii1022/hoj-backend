@@ -275,23 +275,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         } catch (IOException e) {
             log.error("文件上传失败:{}",e.getMessage());
         }
-        return "Yes";
+        return "fail";
     }
 
     @Override
     public Boolean deleteFile(String fileUrl) {
         boolean flag = true;
         try {
-            String[] split = fileUrl.split("/");
-            String fileName = split[split.length - 1];
-            ossClient.deleteObject(bucketName, fileName);
+            ossClient.deleteObject(bucketName, fileUrl);
         }catch (Exception e){
             log.error("文件删除失败:{}",e.getMessage());
             flag = false;
-        }
-        finally {
-            //OSS关闭服务，不然会造成OOM
-            ossClient.shutdown();
         }
         return flag;
     }

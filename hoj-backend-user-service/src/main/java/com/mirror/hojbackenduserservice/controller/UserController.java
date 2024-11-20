@@ -1,15 +1,17 @@
 package com.mirror.hojbackenduserservice.controller;
 
-import com.aliyun.oss.OSS;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mirror.hojbackendcommon.annotation.AuthCheck;
 import com.mirror.hojbackendcommon.common.BaseResponse;
 import com.mirror.hojbackendcommon.common.DeleteRequest;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.common.ResultUtils;
+import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
+import com.mirror.hojbackendcommon.utils.OssUtil;
+import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.user.UserAddRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserLoginRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserQueryRequest;
@@ -17,6 +19,7 @@ import com.mirror.hojbackendmodel.model.dto.user.UserRegisterRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserUpdateMyRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserUpdateRequest;
 import com.mirror.hojbackendmodel.model.entity.User;
+import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
 import com.mirror.hojbackendmodel.model.vo.LoginUserVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
 import com.mirror.hojbackenduserservice.service.UserService;
@@ -53,8 +56,8 @@ public class UserController {
     @Resource
     private UserService userService;
 
-    @Resource
-    private OSS ossClient;
+//    @Resource
+//    private OSS ossClient;
 
     /**
      * 用户注册
@@ -303,7 +306,7 @@ public class UserController {
         BeanUtils.copyProperties(userUpdateMyRequest, user);
         user.setId(loginUser.getId());
         String userPassword = user.getUserPassword();
-        if(StringUtils.isNotBlank(userPassword)){
+        if (StringUtils.isNotBlank(userPassword)) {
             String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
             user.setUserPassword(encryptPassword);
         }
@@ -316,7 +319,7 @@ public class UserController {
     @PostMapping("/upload")
     public BaseResponse<String> uploadFile(@RequestBody MultipartFile file) {
         String originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
-        return ResultUtils.success(userService.uploadFile(file, null));
+        return ResultUtils.success(OssUtil.uploadFile(file, null, FileConstant.USER_AVATAR_PREFIX));
     }
 
     /**
@@ -342,8 +345,7 @@ public class UserController {
                 originalFilename = split[split.length - 1];
             }
         }
-
-        String avatarResult = userService.uploadFile(file, originalFilename);
+        String avatarResult = OssUtil.uploadFile(file, originalFilename, FileConstant.USER_AVATAR_PREFIX);
         User loginUser = userService.getLoginUser(request);
         loginUser.setUserAvatar(avatarResult);
         boolean result = userService.updateById(loginUser);
@@ -352,7 +354,24 @@ public class UserController {
     }
 
     @PostMapping("/deleteFile")
-    public BaseResponse<Boolean> deleteFile(@RequestParam("fileUrl") String fileUrl) {
-        return ResultUtils.success(userService.deleteFile(fileUrl));
+    public BaseResponse<Boolean> deleteFile(@RequestParam("fileName") String fileName) {
+        return ResultUtils.success(OssUtil.deleteFile(fileName));
+    }
+
+    @GetMapping("/test")
+    public BaseResponse<Boolean> test() {
+        boolean flag = true;
+        try {
+            Long questionId1 = SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName());
+            Long questionId2 = SeqUtil.next(BaseSequenceEnum.QUESTION_ID.getName());
+            Long questionId3 = SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName());
+            System.out.println(questionId1);
+            System.out.println(questionId2);
+            System.out.println(questionId3);
+        }catch (Exception e){
+            e.printStackTrace();
+            flag=false;
+        }
+        return ResultUtils.success(flag);
     }
 }

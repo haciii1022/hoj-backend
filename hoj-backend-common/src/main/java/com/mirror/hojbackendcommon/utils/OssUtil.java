@@ -33,7 +33,13 @@ public final class OssUtil {
         endpoint = environment.getProperty("aliyun.oss.endpoint");
     }
 
-    public static String uploadFile(MultipartFile file, String originalFilename) {
+    /**
+     * 上传文件
+     * @param file
+     * @param originalFilename
+     * @return
+     */
+    public static String uploadFile(MultipartFile file, String originalFilename, String pathPrefix) {
         //获取原生文件名
         String fileName = file.getOriginalFilename();
         // 拼装OSS上存储的路径
@@ -42,7 +48,7 @@ public final class OssUtil {
         String contentType = file.getContentType();
         //在OSS上bucket下的文件名
         String finalFileName = Optional.ofNullable(originalFilename).orElse(java.lang.String.valueOf(UUID.fastUUID()));
-        String uploadFileName = "hoj/user" + "/" + finalFileName + extension;
+        String uploadFileName = pathPrefix + "/" + finalFileName + extension;
         //获取文件后缀
         try {
             PutObjectResult result = ossClient.putObject(bucketName, uploadFileName, file.getInputStream());
@@ -55,5 +61,21 @@ public final class OssUtil {
             log.error("文件上传失败:{}", e.getMessage());
         }
         return "fail";
+    }
+
+    /**
+     * 删除文件
+     * @param fileUrl
+     * @return
+     */
+    public static Boolean deleteFile(String fileUrl) {
+        boolean flag = true;
+        try {
+            ossClient.deleteObject(bucketName, fileUrl);
+        }catch (Exception e){
+            log.error("文件删除失败:{}",e.getMessage());
+            flag = false;
+        }
+        return flag;
     }
 }
