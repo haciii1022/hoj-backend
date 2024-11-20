@@ -12,6 +12,9 @@ import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
+import com.mirror.hojbackendcommon.utils.SeqUtil;
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseGroupAddRequest;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeCase;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
 import com.mirror.hojbackendmodel.model.dto.question.QuestionAddRequest;
@@ -20,11 +23,16 @@ import com.mirror.hojbackendmodel.model.dto.question.QuestionQueryRequest;
 import com.mirror.hojbackendmodel.model.dto.question.QuestionUpdateRequest;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitAddRequest;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitQueryRequest;
+import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.entity.User;
+import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
+import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
 import com.mirror.hojbackendmodel.model.vo.QuestionSubmitVO;
 import com.mirror.hojbackendmodel.model.vo.QuestionVO;
+import com.mirror.hojbackendquestionservice.service.JudgeCaseFileService;
+import com.mirror.hojbackendquestionservice.service.JudgeCaseGroupService;
 import com.mirror.hojbackendquestionservice.service.QuestionService;
 import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
@@ -36,7 +44,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -61,6 +71,12 @@ public class QuestionController {
 
     @Resource
     private QuestionSubmitService questionSubmitService;
+
+    @Resource
+    private JudgeCaseGroupService judgeCaseGroupService;
+
+    @Resource
+    private JudgeCaseFileService judgeCaseFileService;
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
@@ -92,6 +108,7 @@ public class QuestionController {
             question.setJudgeConfig(JSONUtil.toJsonStr(judgeConfig));
         }
         questionService.validQuestion(question, true);
+        judgeCaseGroupService.validJudgeCaseGroup(question.getId());
         User loginUser = userFeignClient.getLoginUser(request);
         question.setUserId(loginUser.getId());
         question.setFavourNum(0);
@@ -157,6 +174,7 @@ public class QuestionController {
         }
         // 参数校验
         questionService.validQuestion(question, false);
+        judgeCaseGroupService.validJudgeCaseGroup(question.getId());
         long id = questionUpdateRequest.getId();
         // 判断是否存在
         Question oldQuestion = questionService.getById(id);
@@ -293,6 +311,7 @@ public class QuestionController {
         }
         // 参数校验
         questionService.validQuestion(question, false);
+        judgeCaseGroupService.validJudgeCaseGroup(question.getId());
         User loginUser = userFeignClient.getLoginUser(request);
         long id = questionEditRequest.getId();
         // 判断是否存在
@@ -360,9 +379,68 @@ public class QuestionController {
         QuestionSubmit questionSubmit = (QuestionSubmit) redisTemplate.opsForValue().get(key);
         if (questionSubmit == null) {
             questionSubmit = questionSubmitService.getById(questionSubmitId);
-            redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit,3, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit, 3, TimeUnit.MINUTES);
         }
         questionSubmit.setCode(null);
         return ResultUtils.success(QuestionSubmitVO.objToVo(questionSubmit));
+    }
+
+    @GetMapping("/judgeCaseGroup/get")
+    public BaseResponse<List<JudgeCaseGroupVO>> getJudgeCaseGroupListByQuestionId(@RequestParam("questionId") Long questionId, HttpServletRequest request) {
+        if (questionId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Question question = questionService.getById(questionId);
+        if (question == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }
+        return ResultUtils.success(judgeCaseGroupService.getJudgeCaseGroupList(question, request));
+    }
+
+    /**
+     * 新增判题用例组z
+     *
+     * @param judgeCaseGroupAddRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/judgeCaseGroup/add")
+    public BaseResponse<Long> addJudgeCaseGroup(@RequestBody JudgeCaseGroupAddRequest judgeCaseGroupAddRequest, HttpServletRequest request) {
+        User loginUser = userFeignClient.getLoginUser(request);
+        JudgeCaseGroup judgeCaseGroup = new JudgeCaseGroup();
+        BeanUtils.copyProperties(judgeCaseGroupAddRequest, judgeCaseGroup);
+        judgeCaseGroup.setId(SeqUtil.next(BaseSequenceEnum.JUDGE_CASE_GROUP_ID.getName()));
+        judgeCaseGroup.setUserId(loginUser.getId());
+        log.info("addJudgeCaseGroup: {}", judgeCaseGroup);
+        boolean result = judgeCaseGroupService.save(judgeCaseGroup);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(judgeCaseGroup.getId());
+    }
+
+    /**
+     * 新增/更新判题用例文件
+     *
+     * @param file
+     * @param judgeCaseFileAddRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/judgeCaseFile/add")
+    public BaseResponse<Long> addJudgeCaseFile(@RequestPart("file") MultipartFile file,
+                                               @RequestPart("jsonData") JudgeCaseFileAddRequest judgeCaseFileAddRequest, HttpServletRequest request) {
+
+        ThrowUtils.throwIf(file.isEmpty(), ErrorCode.UNPROCESSABLE_ENTITY);
+        return ResultUtils.success(judgeCaseFileService.saveOrUpdateFile(file, judgeCaseFileAddRequest, request));
+
+    }
+
+    @GetMapping("/judgeCaseGroup/delete")
+    public BaseResponse<Boolean> deleteJudgeCaseGroup(@RequestParam("groupId")Long groupId, HttpServletRequest request) {
+        return null;
+    }
+
+    @GetMapping("/judgeCaseFile/delete")
+    public BaseResponse<Boolean> deleteJudgeCaseFile(@RequestParam("fileId")Long fileId, HttpServletRequest request) {
+        return null;
     }
 }

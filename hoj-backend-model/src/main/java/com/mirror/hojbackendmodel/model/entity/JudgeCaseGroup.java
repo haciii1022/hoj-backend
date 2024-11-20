@@ -11,14 +11,15 @@ import java.util.Date;
 
 /**
  * 测试用例组
- * @TableName judgeCaseGroup
+ *
  * @author Mirror
+ * @TableName judgeCaseGroup
  * @date 2024/11/20
  */
-@TableName(value ="judge_case_group")
+@TableName(value = "judge_case_group")
 @Data
 public class JudgeCaseGroup implements Serializable {
-        /**
+    /**
      * id
      */
     @TableId(type = IdType.ASSIGN_ID)

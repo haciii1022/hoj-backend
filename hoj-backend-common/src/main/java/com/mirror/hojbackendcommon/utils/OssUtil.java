@@ -4,6 +4,7 @@ import cn.hutool.core.lang.UUID;
 import cn.hutool.extra.spring.SpringUtil;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.PutObjectResult;
+import com.mirror.hojbackendcommon.constant.FileConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,11 +44,9 @@ public final class OssUtil {
         //获取原生文件名
         String fileName = file.getOriginalFilename();
         // 拼装OSS上存储的路径
-        // String fileName = file.getName();
         String extension = fileName.substring(fileName.lastIndexOf("."));
-        String contentType = file.getContentType();
         //在OSS上bucket下的文件名
-        String finalFileName = Optional.ofNullable(originalFilename).orElse(java.lang.String.valueOf(UUID.fastUUID()));
+        String finalFileName = Optional.ofNullable(originalFilename).orElse(String.valueOf(UUID.fastUUID()));
         String uploadFileName = pathPrefix + "/" + finalFileName + extension;
         //获取文件后缀
         try {
@@ -60,7 +59,7 @@ public final class OssUtil {
         catch (IOException e) {
             log.error("文件上传失败:{}", e.getMessage());
         }
-        return "fail";
+        return FileConstant.UPLOAD_FAIL;
     }
 
     /**
