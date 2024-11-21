@@ -24,4 +24,6 @@ public interface JudgeCaseFileService extends IService<JudgeCaseFile> {
      * @return
      */
     Long saveOrUpdateFile(MultipartFile file, JudgeCaseFileAddRequest judgeCaseFileAddRequest, HttpServletRequest request);
+
+    Boolean deleteJudgeCaseFile(Long fileId);
 }

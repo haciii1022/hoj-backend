@@ -1,5 +1,6 @@
 package com.mirror.hojbackendquestionservice.controller;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -23,6 +24,7 @@ import com.mirror.hojbackendmodel.model.dto.question.QuestionQueryRequest;
 import com.mirror.hojbackendmodel.model.dto.question.QuestionUpdateRequest;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitAddRequest;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitQueryRequest;
+import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
@@ -398,7 +400,7 @@ public class QuestionController {
     }
 
     /**
-     * 新增判题用例组z
+     * 新增判题用例组
      *
      * @param judgeCaseGroupAddRequest
      * @param request
@@ -421,14 +423,14 @@ public class QuestionController {
      * 新增/更新判题用例文件
      *
      * @param file
-     * @param judgeCaseFileAddRequest
+     * @param jsonData
      * @param request
      * @return
      */
     @PostMapping("/judgeCaseFile/add")
     public BaseResponse<Long> addJudgeCaseFile(@RequestPart("file") MultipartFile file,
-                                               @RequestPart("jsonData") JudgeCaseFileAddRequest judgeCaseFileAddRequest, HttpServletRequest request) {
-
+                                               @RequestPart("jsonData") String jsonData, HttpServletRequest request) {
+        JudgeCaseFileAddRequest judgeCaseFileAddRequest = JSONUtil.toBean(jsonData, JudgeCaseFileAddRequest.class);
         ThrowUtils.throwIf(file.isEmpty(), ErrorCode.UNPROCESSABLE_ENTITY);
         return ResultUtils.success(judgeCaseFileService.saveOrUpdateFile(file, judgeCaseFileAddRequest, request));
 
@@ -436,11 +438,19 @@ public class QuestionController {
 
     @GetMapping("/judgeCaseGroup/delete")
     public BaseResponse<Boolean> deleteJudgeCaseGroup(@RequestParam("groupId")Long groupId, HttpServletRequest request) {
-        return null;
+        ThrowUtils.throwIf(groupId <= 0, ErrorCode.PARAMS_ERROR);
+        List<JudgeCaseFile> fileList = judgeCaseFileService.lambdaQuery()
+                .eq(JudgeCaseFile::getGroupId, groupId)
+                .list();
+        if(CollectionUtil.isNotEmpty(fileList)){
+            fileList.forEach(item->judgeCaseFileService.removeById(item.getId()));
+        }
+        return ResultUtils.success(judgeCaseGroupService.removeById(groupId));
     }
 
     @GetMapping("/judgeCaseFile/delete")
     public BaseResponse<Boolean> deleteJudgeCaseFile(@RequestParam("fileId")Long fileId, HttpServletRequest request) {
-        return null;
+        ThrowUtils.throwIf(fileId <= 0, ErrorCode.PARAMS_ERROR);
+        return ResultUtils.success(judgeCaseFileService.deleteJudgeCaseFile(fileId));
     }
 }

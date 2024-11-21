@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Mirror
@@ -74,5 +75,17 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
         boolean b = this.saveOrUpdate(judgeCaseFile);
         ThrowUtils.throwIf(!b, ErrorCode.OPERATION_ERROR);
         return judgeCaseFile.getId();
+    }
+
+    @Override
+    public Boolean deleteJudgeCaseFile(Long fileId) {
+        JudgeCaseFile judgeCaseFile = this.getById(fileId);
+        String filePath = judgeCaseFile.getFileFolder()
+                + FileConstant.SEPARATOR
+                + judgeCaseFile.getFileName()
+                + (Objects.equals(judgeCaseFile.getType(), FileConstant.FILE_TYPE_IN) ? ".in" : ".out");
+        Boolean result = OssUtil.deleteFile(filePath);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return this.removeById(fileId);
     }
 }
