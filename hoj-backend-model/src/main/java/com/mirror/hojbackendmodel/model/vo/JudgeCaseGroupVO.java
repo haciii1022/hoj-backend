@@ -1,5 +1,6 @@
 package com.mirror.hojbackendmodel.model.vo;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
@@ -60,13 +61,15 @@ public class JudgeCaseGroupVO {
         BeanUtils.copyProperties(judgeCaseGroup, judgeCaseGroupVO);
 
         // 查找 inputFile 和 outputFile
-        for (JudgeCaseFile file : judgeCaseFiles) {
-            if (file.getGroupId().equals(judgeCaseGroup.getId())) {
-                if (FileConstant.FILE_TYPE_IN.equals(file.getType())) {
-                    judgeCaseGroupVO.setInputFile(file);
-                }
-                else if (FileConstant.FILE_TYPE_OUT.equals(file.getType())) {
-                    judgeCaseGroupVO.setOutputFile(file);
+        if (CollectionUtil.isNotEmpty(judgeCaseFiles)) {
+            for (JudgeCaseFile file : judgeCaseFiles) {
+                if (file.getGroupId().equals(judgeCaseGroup.getId())) {
+                    if (FileConstant.FILE_TYPE_IN.equals(file.getType())) {
+                        judgeCaseGroupVO.setInputFile(file);
+                    }
+                    else if (FileConstant.FILE_TYPE_OUT.equals(file.getType())) {
+                        judgeCaseGroupVO.setOutputFile(file);
+                    }
                 }
             }
         }

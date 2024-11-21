@@ -14,8 +14,10 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -54,12 +56,13 @@ public class JudgeCaseGroupServiceImpl extends ServiceImpl<JudgeCaseGroupMapper,
                 .in(JudgeCaseFile::getGroupId, groupIds)
                 .list();
         // 按 groupId 分组
-        Map<Long, List<JudgeCaseFile>> filesGroupedByGroupId = files.stream()
+        Map<Long, List<JudgeCaseFile>> filesGroupedByGroupId = Optional.ofNullable(files)
+                .orElse(Collections.emptyList()).stream()
                 .collect(Collectors.groupingBy(JudgeCaseFile::getGroupId));
 
         return groups.stream()
                 .map(group -> {
-                    return JudgeCaseGroupVO.objToVo(group, filesGroupedByGroupId.get(group.getId()));
+                    return JudgeCaseGroupVO.objToVo(group, filesGroupedByGroupId.getOrDefault(group.getId(), null));
                 })
                 .collect(Collectors.toList());
     }
