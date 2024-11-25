@@ -17,10 +17,9 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
-#        server-addr: 172.22.43.88:8848
-        username: nacos
-        password: nacos
+        server-addr: "${NACOS_SERVER_ADDR}"
+        username: "${NACOS_USERNAME}"
+        password: "${NACOS_PASSWORD}"
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -35,11 +34,10 @@ spring:
       timeout: 5000
     #    password: 123456
   rabbitmq:
-    host: localhost
-    port: 5672
-    password: guest
-    username: guest
-  #    password: 123456
+    host: "${RABBITMQ_HOST}"
+    port: "${RABBITMQ_PORT}"
+    username: "${RABBITMQ_USERNAME}"
+    password: "${RABBITMQ_PASSWORD}"
   # 文件上传
   servlet:
     multipart:
@@ -66,3 +64,9 @@ mybatis-plus:
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
 knife4j:
   enable: true
+aliyun:
+  oss:
+    endpoint: "${OSS_ENDPOINT}"
+    bucketName: "${OSS_BUCKET_NAME}"
+    accessKeyId: "${OSS_ACCESS_KEY_ID}"
+    accessKeySecret: "${OSS_ACCESS_KEY_SECRET}"

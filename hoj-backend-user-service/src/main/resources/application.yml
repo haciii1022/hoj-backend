@@ -17,10 +17,9 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: localhost:8848
-#        server-addr: 47.115.53.171:8745
-        username: nacos
-        password: nacos
+        server-addr: "${NACOS_SERVER_ADDR}"
+        username: "${NACOS_USERNAME}"
+        password: "${NACOS_PASSWORD}"
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -61,13 +60,9 @@ mybatis-plus:
 knife4j:
   enable: true
 
-
-
 aliyun:
   oss:
-#    endpoint: oss-cn-shenzhen
-    endpoint: oss-cn-shenzhen.aliyuncs.com
-    bucketName: xxxxxx
-    accessKeyId: xxxxxxx
-    accessKeySecret: xxxxxxx
-
+    endpoint: "${OSS_ENDPOINT}"
+    bucketName: "${OSS_BUCKET_NAME}"
+    accessKeyId: "${OSS_ACCESS_KEY_ID}"
+    accessKeySecret: "${OSS_ACCESS_KEY_SECRET}"
