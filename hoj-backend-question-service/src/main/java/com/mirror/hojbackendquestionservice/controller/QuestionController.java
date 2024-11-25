@@ -453,4 +453,9 @@ public class QuestionController {
         ThrowUtils.throwIf(fileId <= 0, ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(judgeCaseFileService.deleteJudgeCaseFile(fileId));
     }
+
+    @GetMapping("/next")
+    public BaseResponse<Long> getNextQuestionId(HttpServletRequest request) {
+        return ResultUtils.success(SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName()));
+    }
 }
