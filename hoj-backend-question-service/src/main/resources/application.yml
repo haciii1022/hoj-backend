@@ -25,7 +25,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: "${MYSQL_URL}"
     username: "${MYSQL_USERNAME}"
-    password: "${MMYSQL_PASSWORD}"
+    password: "${MYSQL_PASSWORD}"
     # Redis 配置
     redis:
       database: 1
@@ -51,6 +51,8 @@ server:
     # cookie 30 天过期
     session:
       cookie:
+        same-site: none # 设置 SameSite=None
+        secure: true    # 确保 Secure
         max-age: 2592000
         path: /api
 mybatis-plus:
