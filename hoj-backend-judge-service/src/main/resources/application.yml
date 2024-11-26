@@ -27,12 +27,12 @@ spring:
     username: "${MYSQL_USERNAME}"
     password: "${MYSQL_PASSWORD}"
     # Redis 配置
-    redis:
-      database: 1
-      host: "${REDIS_HOST}"
-      port: "${REDIS_PORT}"
-      timeout: 5000
-    #    password: 123456
+  redis:
+    database: 1
+    host: "${REDIS_HOST}"
+    port: "${REDIS_PORT}"
+    timeout: 5000
+#    password: 123456
   rabbitmq:
     host: "${RABBITMQ_HOST}"
     port: "${RABBITMQ_PORT}"
