@@ -24,7 +24,7 @@ create table if not exists user
     updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete     tinyint      default 0                 not null comment '是否删除',
     index idx_unionId (unionId)
-) comment '用户' collate = utf8mb4_unicode_ci;
+) comment '用户' collate = utf8mb4_general_ci;
 
 -- 题目表
 create table if not exists question
@@ -45,7 +45,7 @@ create table if not exists question
     updateTime  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete    tinyint  default 0                 not null comment '是否删除',
     index idx_userId (userId)
-) comment '题目' collate = utf8mb4_unicode_ci;
+) comment '题目' collate = utf8mb4_general_ci;
 
 -- 题目提交表
 create table if not exists question_submit
@@ -62,7 +62,7 @@ create table if not exists question_submit
     isDelete   tinyint  default 0                 not null comment '是否删除',
     index idx_questionId (questionId),
     index idx_userId (userId)
-) comment '题目提交';
+) comment '题目提交' collate = utf8mb4_general_ci;
 
 
 
@@ -80,7 +80,7 @@ create table if not exists post
     updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete   tinyint  default 0                 not null comment '是否删除',
     index idx_userId (userId)
-) comment '帖子' collate = utf8mb4_unicode_ci;
+) comment '帖子' collate = utf8mb4_general_ci;
 
 -- 帖子点赞表（硬删除）
 create table if not exists post_thumb
@@ -92,7 +92,7 @@ create table if not exists post_thumb
     updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     index idx_postId (postId),
     index idx_userId (userId)
-) comment '帖子点赞';
+) comment '帖子点赞' collate = utf8mb4_general_ci;
 
 -- 帖子收藏表（硬删除）
 create table if not exists post_favour
@@ -104,7 +104,7 @@ create table if not exists post_favour
     updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     index idx_postId (postId),
     index idx_userId (userId)
-) comment '帖子收藏';
+) comment '帖子收藏' collate = utf8mb4_general_ci;
 
 
 CREATE TABLE `sequence` (
@@ -112,7 +112,7 @@ CREATE TABLE `sequence` (
   `value` BIGINT NOT NULL,
   `increment_step` INT NOT NULL DEFAULT 1,
   PRIMARY KEY (`name`)
-);
+)comment '序列表' collate = utf8mb4_general_ci;
 
 CREATE PROCEDURE `nextval`(IN seq_name varchar(50), OUT next_value bigint)
 BEGIN
@@ -158,7 +158,7 @@ create table if not exists judge_case_group
     isDelete     tinyint      default 0                 not null comment '是否删除',
     index idx_questionId (questionId),
     index idx_userId (userId)
-) comment '测试用例组' collate = utf8mb4_unicode_ci;
+) comment '测试用例组' collate = utf8mb4_general_ci;
 
 
 create table if not exists judge_case_file
@@ -174,7 +174,7 @@ create table if not exists judge_case_file
     updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete     tinyint      default 0                 not null comment '是否删除',
     index idx_userId (userId)
-) comment '测试用例文件' collate = utf8mb4_unicode_ci;
+) comment '测试用例文件' collate = utf8mb4_general_ci;
 
 INSERT INTO sequence (name, value, increment_step)VALUES ('question_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
 INSERT INTO sequence (name, value, increment_step)VALUES ('user_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
