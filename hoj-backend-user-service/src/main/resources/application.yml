@@ -70,6 +70,7 @@ aliyun:
     accessKeySecret: "${OSS_ACCESS_KEY_SECRET}"
 
 sftp:
+  enable: true
   remoteHost: "${SFTP_REMOTE_HOST}"
   port: "${SFTP_PORT}"
   username: "${SFTP_USERNAME}"

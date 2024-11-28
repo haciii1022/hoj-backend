@@ -66,3 +66,9 @@ mybatis-plus:
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
 knife4j:
   enable: true
+sftp:
+  enable: false
+  remoteHost: "${SFTP_REMOTE_HOST}"
+  port: "${SFTP_PORT}"
+  username: "${SFTP_USERNAME}"
+  password: "${SFTP_PASSWORD}"
