@@ -72,3 +72,9 @@ aliyun:
     bucketName: "${OSS_BUCKET_NAME}"
     accessKeyId: "${OSS_ACCESS_KEY_ID}"
     accessKeySecret: "${OSS_ACCESS_KEY_SECRET}"
+
+sftp:
+  remoteHost: "${SFTP_REMOTE_HOST}"
+  port: "${SFTP_PORT}"
+  username: "${SFTP_USERNAME}"
+  password: "${SFTP_PASSWORD}"

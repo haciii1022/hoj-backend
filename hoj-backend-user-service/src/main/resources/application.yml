@@ -46,8 +46,8 @@ server:
     # cookie 30 天过期
     session:
       cookie:
-        same-site: none # 设置 SameSite=None
-        secure: true    # 确保 Secure
+#        same-site: none # 设置 SameSite=None
+#        secure: true    # 确保 Secure
         max-age: 2592000
         path: /api
 mybatis-plus:
@@ -68,3 +68,9 @@ aliyun:
     bucketName: "${OSS_BUCKET_NAME}"
     accessKeyId: "${OSS_ACCESS_KEY_ID}"
     accessKeySecret: "${OSS_ACCESS_KEY_SECRET}"
+
+sftp:
+  remoteHost: "${SFTP_REMOTE_HOST}"
+  port: "${SFTP_PORT}"
+  username: "${SFTP_USERNAME}"
+  password: "${SFTP_PASSWORD}"
