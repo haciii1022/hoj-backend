@@ -4,22 +4,17 @@ import cn.hutool.extra.spring.SpringUtil;;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+import com.mirror.hojbackendcommon.client.SftpClient;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Paths;;
 
 /**
@@ -32,11 +27,11 @@ import java.nio.file.Paths;;
 public final class FileUtil {
 
     private FileUtil(){}
-
-    private static final ChannelSftp channelSftp;
+    private static ChannelSftp channelSftp;
+    private static final SftpClient sftpClient;
 
     static {
-        channelSftp = SpringUtil.getBean(ChannelSftp.class);
+        sftpClient = SpringUtil.getBean(SftpClient.class);
     }
 
     /**
@@ -46,6 +41,7 @@ public final class FileUtil {
      * @param fullFilePath 远程服务器上文件保存的完整路径
      */
     public static void saveFileViaSFTP(MultipartFile originalFile, String fullFilePath) throws Exception {
+        channelSftp = sftpClient.getChannelSftp();
         // 获取文件所在的目录
         String folderPath = Paths.get(fullFilePath).getParent().toString();
         ensureDirectoryExists(folderPath);
@@ -63,6 +59,7 @@ public final class FileUtil {
      * @throws SftpException 如果删除文件失败或文件不存在
      */
     public static void deleteFileViaSFTP(String remoteFilePath) throws SftpException {
+        channelSftp = sftpClient.getChannelSftp();
         try {
             // 检查文件是否存在
             SftpATTRS attrs = channelSftp.stat(remoteFilePath);
@@ -87,6 +84,7 @@ public final class FileUtil {
      * @return ResponseEntity<byte[]> 包含文件的字节流
      */
     public static Resource downloadFileViaSFTP(String remoteFilePath) {
+        channelSftp = sftpClient.getChannelSftp();
         // 从远程路径获取文件流
         InputStream inputStream = null;
         log.info("下载文件：{}", remoteFilePath);
@@ -105,6 +103,7 @@ public final class FileUtil {
      * 如果目录不存在，则逐级创建
      */
     private static void ensureDirectoryExists(String remoteDir) throws SftpException {
+        channelSftp = sftpClient.getChannelSftp();
         String[] folders = remoteDir.split("/");
         StringBuilder pathBuilder = new StringBuilder("/");
 
@@ -123,6 +122,7 @@ public final class FileUtil {
      * 判断远程目录是否存在
      */
     public static boolean isDirectoryExist(String remoteDir) {
+        channelSftp = sftpClient.getChannelSftp();
         try {
             SftpATTRS attrs = channelSftp.stat(remoteDir);
             return attrs.isDir();  // 如果是目录，返回 true
@@ -139,6 +139,7 @@ public final class FileUtil {
      * @return true 如果文件内容一致（忽略最后一行的换行符），否则 false
      */
     public static boolean compareFilesIgnoringLastLineEnding(String filePath1, String filePath2) {
+        channelSftp = sftpClient.getChannelSftp();
         try (InputStream inputStream1 = channelSftp.get(filePath1);
              InputStream inputStream2 = channelSftp.get(filePath2)) {
 
