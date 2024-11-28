@@ -16,6 +16,7 @@ public enum ErrorCode {
     SYSTEM_ERROR(50000, "系统内部异常"),
     OPERATION_ERROR(50001, "操作失败"),
     UPLOAD_FILE_ERROR(50002, "上传文件失败"),
+    DOWNLOAD_FILE_ERROR(50003, "下载文件失败"),
     API_REQUEST_ERROR(50010, "请求失败");
 
     /**

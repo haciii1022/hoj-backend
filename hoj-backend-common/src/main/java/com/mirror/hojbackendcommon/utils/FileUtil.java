@@ -4,6 +4,8 @@ import cn.hutool.extra.spring.SpringUtil;;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+import com.mirror.hojbackendcommon.common.ErrorCode;
+import com.mirror.hojbackendcommon.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -91,33 +93,12 @@ public final class FileUtil {
         try {
             inputStream = channelSftp.get(remoteFilePath);
         } catch (SftpException e) {
-            throw new RuntimeException(e);
+            log.error("文件下载失败，远程文件路径：{}", remoteFilePath, e);
+            throw new BusinessException(ErrorCode.DOWNLOAD_FILE_ERROR);
         }
 
         // 使用 InputStreamResource 将文件流包装成 Resource 对象
         return new InputStreamResource(inputStream);
-//        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//        try (InputStream inputStream = channelSftp.get(remoteFilePath)) {
-//            byte[] buffer = new byte[1024];
-//            int bytesRead;
-//            while ((bytesRead = inputStream.read(buffer)) != -1) {
-//                outputStream.write(buffer, 0, bytesRead);
-//            }
-//
-//            // 设置文件下载的响应头
-//            HttpHeaders headers = new HttpHeaders();
-//            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + Paths.get(remoteFilePath).getFileName().toString() + "\"");
-//            headers.add(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
-//
-//            return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
-//
-//        } catch (SftpException e) {
-//            log.error("文件下载失败，远程文件路径：{}", remoteFilePath, e);
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-//        } catch (Exception e) {
-//            log.error("文件下载过程中发生错误：{}", remoteFilePath, e);
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-//        }
     }
     /**
      * 确保远程服务器的目录存在
@@ -149,4 +130,51 @@ public final class FileUtil {
             return false;  // 如果发生异常，目录不存在
         }
     }
+
+    /**
+     * 比对两个文件的内容是否一致，忽略最后一行的换行符（\n 或 \r\n）
+     *
+     * @param filePath1 第一个文件的完整路径
+     * @param filePath2 第二个文件的完整路径
+     * @return true 如果文件内容一致（忽略最后一行的换行符），否则 false
+     */
+    public static boolean compareFilesIgnoringLastLineEnding(String filePath1, String filePath2) {
+        try (InputStream inputStream1 = channelSftp.get(filePath1);
+             InputStream inputStream2 = channelSftp.get(filePath2)) {
+
+            // 将输入流读取为去掉最后一行换行符后的字节数组
+            byte[] file1Bytes = readStreamIgnoringLastLineEnding(inputStream1);
+            byte[] file2Bytes = readStreamIgnoringLastLineEnding(inputStream2);
+
+            // 比较两个文件的字节数组是否相等
+            return DigestUtils.md5DigestAsHex(file1Bytes).equals(DigestUtils.md5DigestAsHex(file2Bytes));
+
+        } catch (Exception e) {
+            log.error("文件比对失败，文件路径：{} 和 {}", filePath1, filePath2, e);
+            return false;
+        }
+    }
+
+    /**
+     * 读取输入流，并忽略最后一行的换行符（\n 或 \r\n）
+     *
+     * @param inputStream 文件输入流
+     * @return 去掉最后一行换行符的字节数组
+     */
+    private static byte[] readStreamIgnoringLastLineEnding(InputStream inputStream) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+
+        // 转换为字符串并去除末尾的换行符
+        String fileContent = outputStream.toString("UTF-8").replaceFirst("(\\r?\\n)+$", "");
+
+        // 将处理后的字符串转换回字节数组
+        return fileContent.getBytes("UTF-8");
+    }
+
 }
