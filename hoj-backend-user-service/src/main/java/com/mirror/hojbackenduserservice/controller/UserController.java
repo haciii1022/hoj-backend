@@ -1,5 +1,6 @@
 package com.mirror.hojbackenduserservice.controller;
 
+import com.alibaba.cloud.commons.io.FileUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mirror.hojbackendcommon.annotation.AuthCheck;
 import com.mirror.hojbackendcommon.common.BaseResponse;
@@ -10,6 +11,7 @@ import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
+import com.mirror.hojbackendcommon.utils.FileUtil;
 import com.mirror.hojbackendcommon.utils.OssUtil;
 import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.user.UserAddRequest;
@@ -24,9 +26,11 @@ import com.mirror.hojbackendmodel.model.vo.LoginUserVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
 import com.mirror.hojbackenduserservice.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.implementation.bytecode.Throw;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.FileSystemUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,6 +42,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import static com.mirror.hojbackenduserservice.service.impl.UserServiceImpl.SALT;
@@ -192,6 +198,11 @@ public class UserController {
         }
         User user = new User();
         BeanUtils.copyProperties(userUpdateRequest, user);
+        String userPassword = user.getUserPassword();
+        if (StringUtils.isNotBlank(userPassword)) {
+            String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+            user.setUserPassword(encryptPassword);
+        }
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
@@ -334,20 +345,32 @@ public class UserController {
     public BaseResponse<Boolean> updateUserAvatar(@RequestPart("file") MultipartFile file,
                                                   @RequestPart(value = "originalUrl", required = false) String originalUrl,
                                                   HttpServletRequest request) {
-//        String  originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
         // 检查文件是否为空
         ThrowUtils.throwIf(file.isEmpty(), ErrorCode.UNPROCESSABLE_ENTITY);
-
-        String originalFilename = null;
-        if (StringUtils.isNotBlank(originalUrl)) {
-            String[] split = originalUrl.split("/");
-            if (split.length > 0) {
-                originalFilename = split[split.length - 1];
-            }
-        }
-        String avatarResult = OssUtil.uploadFile(file, originalFilename, FileConstant.USER_AVATAR_PREFIX);
+        //保存文件到指定文件夹
         User loginUser = userService.getLoginUser(request);
-        loginUser.setUserAvatar(avatarResult);
+        String originalFilename = file.getOriginalFilename();
+        String extension = null;
+        if (originalFilename != null) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        }
+        String userAvatarUrl = FileConstant.USER_AVATAR_PREFIX + "/user_" + loginUser.getId() + extension;
+        String fullFilePath = FileConstant.ROOT_PATH + userAvatarUrl;
+        try {
+            FileUtil.saveFileViaSFTP(file, fullFilePath);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.UPLOAD_FILE_ERROR);
+        }
+        // 原先的OSS上传逻辑
+//        String originalFilename = null;
+//        if (StringUtils.isNotBlank(originalUrl)) {
+//            String[] split = originalUrl.split("/");
+//            if (split.length > 0) {
+//                originalFilename = split[split.length - 1];
+//            }
+//        }
+//        String avatarResult = OssUtil.uploadFile(file, originalFilename, FileConstant.USER_AVATAR_PREFIX);
+        loginUser.setUserAvatar(File.separator + userAvatarUrl);
         boolean result = userService.updateById(loginUser);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);

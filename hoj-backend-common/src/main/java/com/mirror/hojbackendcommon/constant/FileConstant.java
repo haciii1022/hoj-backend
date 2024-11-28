@@ -8,6 +8,8 @@ public interface FileConstant {
 
     String OSS_PREFIX = "hoj";
 
+    String ROOT_PATH = "/home/ubuntu/";
+
     String USER_AVATAR_PREFIX = "hoj/user";
 
     String QUESTION_PREFIX = "hoj/question";

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
+import com.sun.org.apache.xpath.internal.operations.Bool;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -24,6 +25,8 @@ public interface JudgeCaseGroupService extends IService<JudgeCaseGroup> {
     void validJudgeCaseGroup(Long questionId);
 
     List<JudgeCaseGroupVO> getJudgeCaseGroupList(Question qustion, HttpServletRequest request);
+
+    Boolean deleteJudgeCaseGroup(Long groupId);
 
 
 }

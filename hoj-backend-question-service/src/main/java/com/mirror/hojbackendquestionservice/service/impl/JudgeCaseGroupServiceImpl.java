@@ -1,5 +1,6 @@
 package com.mirror.hojbackendquestionservice.service.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
@@ -11,6 +12,7 @@ import com.mirror.hojbackendquestionservice.service.JudgeCaseGroupService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -65,5 +67,17 @@ public class JudgeCaseGroupServiceImpl extends ServiceImpl<JudgeCaseGroupMapper,
                     return JudgeCaseGroupVO.objToVo(group, filesGroupedByGroupId.getOrDefault(group.getId(), null));
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Boolean deleteJudgeCaseGroup(Long groupId) {
+        List<JudgeCaseFile> fileList = judgeCaseFileService.lambdaQuery()
+                .eq(JudgeCaseFile::getGroupId, groupId)
+                .list();
+        if(CollectionUtil.isNotEmpty(fileList)){
+            fileList.forEach(item->judgeCaseFileService.deleteJudgeCaseFile(item.getId()));
+        }
+        return this.removeById(groupId);
     }
 }

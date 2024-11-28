@@ -9,10 +9,12 @@ import com.mirror.hojbackendcommon.common.BaseResponse;
 import com.mirror.hojbackendcommon.common.DeleteRequest;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.common.ResultUtils;
+import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
+import com.mirror.hojbackendcommon.utils.FileUtil;
 import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseGroupAddRequest;
@@ -41,6 +43,10 @@ import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,6 +58,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -433,25 +441,35 @@ public class QuestionController {
         JudgeCaseFileAddRequest judgeCaseFileAddRequest = JSONUtil.toBean(jsonData, JudgeCaseFileAddRequest.class);
         ThrowUtils.throwIf(file.isEmpty(), ErrorCode.UNPROCESSABLE_ENTITY);
         return ResultUtils.success(judgeCaseFileService.saveOrUpdateFile(file, judgeCaseFileAddRequest, request));
-
     }
 
     @GetMapping("/judgeCaseGroup/delete")
-    public BaseResponse<Boolean> deleteJudgeCaseGroup(@RequestParam("groupId")Long groupId, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteJudgeCaseGroup(@RequestParam("groupId") Long groupId, HttpServletRequest request) {
         ThrowUtils.throwIf(groupId <= 0, ErrorCode.PARAMS_ERROR);
-        List<JudgeCaseFile> fileList = judgeCaseFileService.lambdaQuery()
-                .eq(JudgeCaseFile::getGroupId, groupId)
-                .list();
-        if(CollectionUtil.isNotEmpty(fileList)){
-            fileList.forEach(item->judgeCaseFileService.removeById(item.getId()));
-        }
-        return ResultUtils.success(judgeCaseGroupService.removeById(groupId));
+        return ResultUtils.success(judgeCaseGroupService.deleteJudgeCaseGroup(groupId));
     }
 
     @GetMapping("/judgeCaseFile/delete")
-    public BaseResponse<Boolean> deleteJudgeCaseFile(@RequestParam("fileId")Long fileId, HttpServletRequest request) {
+    public BaseResponse<Boolean> deleteJudgeCaseFile(@RequestParam("fileId") Long fileId, HttpServletRequest request) {
         ThrowUtils.throwIf(fileId <= 0, ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(judgeCaseFileService.deleteJudgeCaseFile(fileId));
+    }
+
+    @GetMapping("/judgeCaseFile/download")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadJudgeCaseFile(@RequestParam("fileId") Long fileId, HttpServletRequest request) {
+        ThrowUtils.throwIf(fileId <= 0, ErrorCode.PARAMS_ERROR);
+        JudgeCaseFile judgeCaseFile = judgeCaseFileService.getById(fileId);
+        Integer type = judgeCaseFile.getType();
+        String extension = type == 0 ? ".in" : ".out";
+        String fileName = judgeCaseFile.getFileFolder() + File.separator + judgeCaseFile.getFileName() + extension;
+        String fullFileName = FileConstant.ROOT_PATH  + fileName;
+        org.springframework.core.io.Resource resource = FileUtil.downloadFileViaSFTP(fullFileName);
+        // 设置下载文件的响应头
+        String contentDisposition = "attachment; filename=\"" + fileName + "\"";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)  // 设置下载方式
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)  // 让浏览器知道文件是二进制流
+                .body(resource);
     }
 
     @GetMapping("/next")

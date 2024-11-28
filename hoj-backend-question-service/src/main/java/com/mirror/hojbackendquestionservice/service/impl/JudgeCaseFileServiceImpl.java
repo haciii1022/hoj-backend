@@ -2,10 +2,12 @@ package com.mirror.hojbackendquestionservice.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.jcraft.jsch.SftpException;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
+import com.mirror.hojbackendcommon.utils.FileUtil;
 import com.mirror.hojbackendcommon.utils.OssUtil;
 import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
@@ -16,6 +18,7 @@ import com.mirror.hojbackendquestionservice.mapper.JudgeCaseFileMapper;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseFileService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.jni.File;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,11 +48,18 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
         long groupId = judgeCaseFileAddRequest.getGroupId();
         int type = judgeCaseFileAddRequest.getType();
         String pathPrefix = FileConstant.QUESTION_PREFIX + FileConstant.SEPARATOR + questionId;
-        String fileName = questionId + "_" + type;
-        String result = OssUtil.uploadFile(file, fileName, pathPrefix);
-        if (FileConstant.UPLOAD_FAIL.equals(result)) {
+        String fileName = groupId + "_" + type;
+        String extension = type == 0 ? ".in" : ".out";
+//        String result = OssUtil.uploadFile(file, fileName, pathPrefix);
+        try{
+            FileUtil.saveFileViaSFTP(file, FileConstant.ROOT_PATH + pathPrefix +"/"+ fileName+ extension);
+        }catch (Exception e){
             throw new BusinessException(ErrorCode.UPLOAD_FILE_ERROR);
         }
+        // 原先OSS的上传逻辑
+//        if (FileConstant.UPLOAD_FAIL.equals(result)) {
+//            throw new BusinessException(ErrorCode.UPLOAD_FILE_ERROR);
+//        }
         // 判断数据库中是否已经有该数据
         List<JudgeCaseFile> fileList = lambdaQuery()
                 .eq(JudgeCaseFile::getGroupId, groupId)
@@ -57,7 +67,7 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
                 .list();
         JudgeCaseFile judgeCaseFile = new JudgeCaseFile();
         judgeCaseFile.setGroupId(groupId);
-        judgeCaseFile.setUrl(result);
+//        judgeCaseFile.setUrl(result);
         judgeCaseFile.setType(type);
         judgeCaseFile.setFileName(fileName);
         judgeCaseFile.setFileFolder(pathPrefix);
@@ -80,12 +90,19 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
     @Override
     public Boolean deleteJudgeCaseFile(Long fileId) {
         JudgeCaseFile judgeCaseFile = this.getById(fileId);
-        String filePath = judgeCaseFile.getFileFolder()
+        String fileName = judgeCaseFile.getFileFolder()
                 + FileConstant.SEPARATOR
                 + judgeCaseFile.getFileName()
                 + (Objects.equals(judgeCaseFile.getType(), FileConstant.FILE_TYPE_IN) ? ".in" : ".out");
-        Boolean result = OssUtil.deleteFile(filePath);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        String fullFilePath = FileConstant.ROOT_PATH  + fileName;
+        try {
+            FileUtil.deleteFileViaSFTP(fullFilePath);
+        } catch (SftpException e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR);
+        }
+        // 原先OSS的删除逻辑
+//        Boolean result = OssUtil.deleteFile(filePath);
+//        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return this.removeById(fileId);
     }
 }
