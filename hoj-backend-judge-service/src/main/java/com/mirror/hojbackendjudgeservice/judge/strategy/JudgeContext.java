@@ -25,6 +25,12 @@ public class JudgeContext {
 
     private List<String> outputList;
 
+    private List<String> outputFilePathList;
+
+    private List<String> judgeCaseOutputFilePathList;
+
+    private List<String> judgeCaseinputFilePathList;
+
     private List<JudgeCase> judgeCaseList;
 
     private Question question;

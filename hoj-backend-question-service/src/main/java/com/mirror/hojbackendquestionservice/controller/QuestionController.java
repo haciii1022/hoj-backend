@@ -1,6 +1,5 @@
 package com.mirror.hojbackendquestionservice.controller;
 
-import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -44,7 +43,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -475,5 +473,13 @@ public class QuestionController {
     @GetMapping("/next")
     public BaseResponse<Long> getNextQuestionId(HttpServletRequest request) {
         return ResultUtils.success(SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName()));
+    }
+
+    @GetMapping("/test")
+    public BaseResponse<Boolean> test(HttpServletRequest request) {
+        String filePath = "/home/ubuntu/hoj/question/1801181035134369793/4_1.out";
+        String filePath2 = "/home/ubuntu/hoj/question/1801181035134369793/4_1.ans";
+        boolean b = FileUtil.compareFilesIgnoringLastLineEnding(filePath, filePath2);
+        return ResultUtils.success(b);
     }
 }

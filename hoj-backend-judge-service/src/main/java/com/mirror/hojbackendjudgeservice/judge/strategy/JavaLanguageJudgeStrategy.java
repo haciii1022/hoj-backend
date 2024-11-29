@@ -16,14 +16,21 @@ import java.util.Objects;
  */
 public class JavaLanguageJudgeStrategy implements JudgeStrategy {
 
+    /**
+     *
+     * @param judgeContext
+     * @return JudgeInfo 为总判题信息
+     */
     @Override
     public JudgeInfo doJudge(JudgeContext judgeContext) {
         //获取相关配置
         Question question = judgeContext.getQuestion();
-        List<String> outputList = judgeContext.getOutputList();
+        // 旧版本
+//        List<String> outputList = judgeContext.getOutputList();
+//        List<String> inputList = judgeContext.getInputList();
+//        List<JudgeCase> judgeCaseList = judgeContext.getJudgeCaseList();
         String judgeConfigStr = question.getJudgeConfig();
-        List<String> inputList = judgeContext.getInputList();
-        List<JudgeCase> judgeCaseList = judgeContext.getJudgeCaseList();
+
         List<JudgeInfo> judgeInfoList = judgeContext.getJudgeInfoList();
         long maxExecuteTime = 0L;
         long maxExecuteMemory = 0L;
@@ -52,22 +59,32 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
             judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
+        /*
+          1、RUNTIME_ERROR
+          2、Memory Limit Exceeded
+          3、Time Limit Exceeded
+          4、Wrong Answer / Accepted
+         */
+        // TODO 获取judgeCaseOutputFilePathList
+        List<String> judgeCaseOutputFilePathList = judgeContext.getJudgeCaseOutputFilePathList();
+        List<String> outputFilePathList = judgeContext.getOutputFilePathList();
+        // TODO 改为文件比较，调用FileUtil方法，比较.out和.ans是否一致
         //输出个数不同，直接返回错误
-        if (outputList.size() != inputList.size()) {
+        if (judgeCaseOutputFilePathList.size() != outputFilePathList.size()) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
             judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //依次比对每一项输出和预期输出
-        for (int i = 0; i < outputList.size(); i++) {
-            if (!Objects.equals(outputList.get(i), judgeCaseList.get(i).getOutput())) {
-                System.out.println("outputList.get(i): " + outputList.get(i));
-                System.out.println("judgeCaseList.get(i).getOutput(): " + judgeCaseList.get(i).getOutput());
-                judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
-                judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
-                return judgeInfoResult;
-            }
-        }
+//        for (int i = 0; i < outputList.size(); i++) {
+//            if (!Objects.equals(outputList.get(i), judgeCaseList.get(i).getOutput())) {
+//                System.out.println("outputList.get(i): " + outputList.get(i));
+//                System.out.println("judgeCaseList.get(i).getOutput(): " + judgeCaseList.get(i).getOutput());
+//                judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
+//                judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
+//                return judgeInfoResult;
+//            }
+//        }
         judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
         return judgeInfoResult;
     }

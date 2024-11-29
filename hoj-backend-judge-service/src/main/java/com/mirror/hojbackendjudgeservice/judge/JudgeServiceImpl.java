@@ -2,6 +2,7 @@ package com.mirror.hojbackendjudgeservice.judge;
 
 import cn.hutool.json.JSONUtil;
 import com.mirror.hojbackendcommon.common.ErrorCode;
+import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendjudgeservice.judge.codesandbox.CodeSandbox;
@@ -11,6 +12,7 @@ import com.mirror.hojbackendjudgeservice.judge.strategy.JudgeContext;
 import com.mirror.hojbackendmodel.model.codesandbox.ExecuteCodeRequest;
 import com.mirror.hojbackendmodel.model.codesandbox.ExecuteCodeResponse;
 import com.mirror.hojbackendmodel.model.codesandbox.JudgeInfo;
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeCase;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
 import com.mirror.hojbackendmodel.model.entity.Question;
@@ -78,18 +80,28 @@ public class JudgeServiceImpl implements JudgeService {
         String code = questionSubmit.getCode();
         String language = questionSubmit.getLanguage();
         String judgeCaseStr = question.getJudgeCase();
-        List<JudgeCase> judgeCaseList = JSONUtil.toList(judgeCaseStr, JudgeCase.class);
-        List<String> inputList = judgeCaseList.stream().map(JudgeCase::getInput).collect(Collectors.toList());
+//        List<JudgeCase> judgeCaseList = JSONUtil.toList(judgeCaseStr, JudgeCase.class);
+//        List<String> inputList = judgeCaseList.stream().map(JudgeCase::getInput).collect(Collectors.toList());
         String judgeConfigStr = question.getJudgeConfig();
         JudgeConfig judgeConfig = JSONUtil.toBean(judgeConfigStr, JudgeConfig.class);
+        
+        //  获取inputFilePathList
+        JudgeCaseFileQueryRequest request = new JudgeCaseFileQueryRequest();
+        request.setQuestionId(questionId);
+        request.setType(FileConstant.FILE_TYPE_IN);
+        List<String> judgeCaseInputFilePathList = questionFeignClient.getJudgeCaseFileListWithType(request);
+
+        request.setType(FileConstant.FILE_TYPE_OUT);
+        List<String> judgeCaseOutputFilePathList = questionFeignClient.getJudgeCaseFileListWithType(request);
         ExecuteCodeRequest executeCodeRequest = ExecuteCodeRequest.builder()
                 .code(code)
                 .language(language)
-                .inputList(inputList)
+//                .inputList(inputList)
+                .inputFilePathList(judgeCaseInputFilePathList)
                 .timeLimit(judgeConfig.getTimeLimit())
                 .memoryLimit(judgeConfig.getMemoryLimit())
                 .build();
-        //TODO 这里的ExecuteCodeResponse要修改一下，和沙箱的对齐
+        //FIXME 这里的ExecuteCodeResponse要修改一下，和沙箱的对齐
         JudgeInfo judgeInfo;
         ExecuteCodeResponse executeCodeResponse = codeSandbox.executeCode(executeCodeRequest);
         //如果沙箱执行失败，直接返回
@@ -106,11 +118,15 @@ public class JudgeServiceImpl implements JudgeService {
             //根据沙箱的执行结果，设置题目的判题状态和信息
             JudgeContext judgeContext = new JudgeContext();
             judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
+            judgeContext.setJudgeCaseinputFilePathList(judgeCaseInputFilePathList);
+            judgeContext.setOutputFilePathList(executeCodeResponse.getOutputFilePathList());
+            judgeContext.setJudgeCaseOutputFilePathList(judgeCaseOutputFilePathList);
             judgeContext.setQuestion(question);
             judgeContext.setQuestionSubmit(questionSubmit);
-            judgeContext.setOutputList(executeCodeResponse.getOutputList());
-            judgeContext.setJudgeCaseList(judgeCaseList);
-            judgeContext.setInputList(inputList);
+//            judgeContext.setOutputList(executeCodeResponse.getOutputList());
+//            judgeContext.setJudgeCaseList(judgeCaseList);
+//            judgeContext.setInputList(inputList);
+            // TODO 总判题信息，后续需要拼接个判题子信息
             judgeInfo = judgeManager.doJudge(judgeContext);
             //在数据库中更新判题状态
             if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getText())) {
@@ -127,7 +143,7 @@ public class JudgeServiceImpl implements JudgeService {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
             }
         }
-
+        // TODO questionSubmit.judgeInfo设置成返回的 judgeInfo+judgeInfoList,第一个为总judgeInfo
         questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
         update = questionFeignClient.updateQuestionSubmitById(questionSubmitUpdate);
         if (!update) {

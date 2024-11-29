@@ -19,6 +19,8 @@ public class ExecuteCodeRequest {
 
     private List<String> inputList;
 
+    private List<String> inputFilePathList;
+
     private String code;
 
     private String language;

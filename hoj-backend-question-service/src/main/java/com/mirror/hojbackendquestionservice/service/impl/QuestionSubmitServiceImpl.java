@@ -88,7 +88,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         questionSubmit.setLanguage(language);
         questionSubmit.setCode(questionSubmitAddRequest.getCode());
         questionSubmit.setJudgeInfo("{}");
-        //TODO 设置初始状态
+        // 设置初始状态
         questionSubmit.setStatus(QuestionSubmitStatusEnum.WAITING.getValue());
         questionSubmit.setQuestionId(questionSubmitAddRequest.getQuestionId());
         questionSubmit.setUserId(userId);
@@ -100,7 +100,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         Long questionSubmitId = questionSubmit.getId();
         myMessageProducer.sendMessage("code_exchange", "my_routingKey", String.valueOf(questionSubmitId));
 //        CompletableFuture.runAsync(() -> {
-//            //TODO 异步执行判题
+//             异步执行判题
 //            judgeService.doJudge(questionSubmitId);
 //        });
         return questionSubmitId;

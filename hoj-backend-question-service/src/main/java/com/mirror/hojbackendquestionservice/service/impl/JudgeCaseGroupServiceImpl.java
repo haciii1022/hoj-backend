@@ -1,6 +1,7 @@
 package com.mirror.hojbackendquestionservice.service.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
@@ -49,6 +50,9 @@ public class JudgeCaseGroupServiceImpl extends ServiceImpl<JudgeCaseGroupMapper,
                 .eq(JudgeCaseGroup::getQuestionId, question.getId())
                 .orderByAsc(JudgeCaseGroup::getId)
                 .list();
+        if(ObjectUtil.isEmpty(groups)){
+            return Collections.emptyList();
+        }
         // 获取 groupIds
         List<Long> groupIds = groups.stream()
                 .map(JudgeCaseGroup::getId)

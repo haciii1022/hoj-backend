@@ -1,5 +1,6 @@
 package com.mirror.hojbackendserverclient.service;
 
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -7,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 /**
 * @author Mirror
@@ -27,4 +30,7 @@ public interface QuestionFeignClient{
 
     @PostMapping("/question_submit/update")
     boolean updateQuestionSubmitById(@RequestBody QuestionSubmit questionSubmit);
+
+    @GetMapping("/judgeCaseFile/list")
+    List<String> getJudgeCaseFileListWithType(@RequestBody JudgeCaseFileQueryRequest judgeCaseFileQueryRequest);
 }

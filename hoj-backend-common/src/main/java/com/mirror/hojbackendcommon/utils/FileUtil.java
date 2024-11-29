@@ -49,6 +49,8 @@ public final class FileUtil {
             // 上传文件到远程服务器的指定路径
             log.info("保存文件：{}", fullFilePath);
             channelSftp.put(inputStream, fullFilePath);
+        }catch (Exception e){
+            log.error("保存文件失败,上传路径：{}",fullFilePath,e);
         }
     }
 

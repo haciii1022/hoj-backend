@@ -2,10 +2,12 @@ package com.mirror.hojbackendquestionservice.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 
 /**
@@ -26,4 +28,6 @@ public interface JudgeCaseFileService extends IService<JudgeCaseFile> {
     Long saveOrUpdateFile(MultipartFile file, JudgeCaseFileAddRequest judgeCaseFileAddRequest, HttpServletRequest request);
 
     Boolean deleteJudgeCaseFile(Long fileId);
+
+    List<String> getJudgeCaseFileListWithType(JudgeCaseFileQueryRequest judgeCaseFileQueryRequest);
 }
