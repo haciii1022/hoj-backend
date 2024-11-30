@@ -14,6 +14,8 @@ public interface FileConstant {
 
     String QUESTION_PREFIX = "hoj/question";
 
+    String QUESTION_SUBMIT_PREFIX = "hoj/questionSubmit";
+
     String SEPARATOR = "/";
 
     String DOT = ".";

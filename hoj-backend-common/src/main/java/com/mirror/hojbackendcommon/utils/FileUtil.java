@@ -27,8 +27,12 @@ import java.nio.file.Paths;;
 public final class FileUtil {
 
     private FileUtil(){}
+
     private static ChannelSftp channelSftp;
+
     private static final SftpClient sftpClient;
+
+    private static final int PERMISSIONS_755 = 0755;
 
     static {
         sftpClient = SpringUtil.getBean(SftpClient.class);
@@ -49,6 +53,7 @@ public final class FileUtil {
             // 上传文件到远程服务器的指定路径
             log.info("保存文件：{}", fullFilePath);
             channelSftp.put(inputStream, fullFilePath);
+            setFilePermissions(fullFilePath, PERMISSIONS_755);
         }catch (Exception e){
             log.error("保存文件失败,上传路径：{}",fullFilePath,e);
         }
@@ -116,6 +121,7 @@ public final class FileUtil {
 
             if (!isDirectoryExist(currentPath)) {
                 channelSftp.mkdir(currentPath); // 创建目录
+                setFilePermissions(currentPath, PERMISSIONS_755);
             }
         }
     }
@@ -179,5 +185,15 @@ public final class FileUtil {
         // 将处理后的字符串转换回字节数组
         return fileContent.getBytes("UTF-8");
     }
-
+    /**
+     * 设置远程文件或目录的权限
+     *
+     * @param remotePath 远程文件或目录的路径
+     * @param permissions 文件权限（例如：0755）
+     */
+    private static void setFilePermissions(String remotePath, int permissions) throws SftpException {
+        String chmodCommand = "chmod " + String.format("%04o", permissions) + " " + remotePath;
+        channelSftp.chmod(permissions, remotePath);
+        log.info("设置权限 {} 给文件 {}", String.format("%04o", permissions), remotePath);
+    }
 }
