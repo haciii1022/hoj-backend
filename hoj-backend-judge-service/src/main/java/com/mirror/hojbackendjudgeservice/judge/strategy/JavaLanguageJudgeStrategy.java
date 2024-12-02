@@ -59,11 +59,11 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
                 judgeInfo.setMessage(JudgeInfoMessageEnum.RUNTIME_ERROR.getText());
                 nowFlag = 5;
             } else {
-                if (memory > judgeConfig.getMemoryLimit() * 2) {
+                if (memory > judgeConfig.getMemoryLimit() * 1024 * 2) {
                     //判断是否超时,java默认是两倍
                     judgeInfo.setMessage(JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED.getText());
                     nowFlag = 4;
-                } else if (time > judgeConfig.getTimeLimit() * 1024 * 2) {
+                } else if (time > judgeConfig.getTimeLimit()  * 2) {
                     //判断是否超内存，java默认是两倍
                     //左边是B，右边是KB
                     judgeInfo.setMessage(JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED.getText());
