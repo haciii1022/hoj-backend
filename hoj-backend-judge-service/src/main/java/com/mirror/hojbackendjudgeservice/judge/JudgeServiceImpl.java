@@ -96,6 +96,7 @@ public class JudgeServiceImpl implements JudgeService {
         ExecuteCodeRequest executeCodeRequest = ExecuteCodeRequest.builder()
                 .code(code)
                 .language(language)
+                .identifier(String.valueOf(questionSubmitId))
 //                .inputList(inputList)
                 .inputFilePathList(judgeCaseInputFilePathList)
                 .timeLimit(judgeConfig.getTimeLimit())

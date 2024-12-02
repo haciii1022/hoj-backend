@@ -67,7 +67,7 @@ public class QuestionInnerController implements QuestionFeignClient {
     }
 
     @Override
-    @GetMapping("/judgeCaseFile/list")
+    @PostMapping("/judgeCaseFile/list")
     public List<String> getJudgeCaseFileListWithType(@RequestBody JudgeCaseFileQueryRequest judgeCaseFileQueryRequest){
         return judgeCaseFileService.getJudgeCaseFileListWithType(judgeCaseFileQueryRequest);
     }

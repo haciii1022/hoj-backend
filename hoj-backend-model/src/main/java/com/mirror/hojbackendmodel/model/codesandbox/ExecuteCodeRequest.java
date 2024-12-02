@@ -17,6 +17,8 @@ import java.util.List;
 @NoArgsConstructor
 public class ExecuteCodeRequest {
 
+    private String identifier;  // 标识符
+
     private List<String> inputList;
 
     private List<String> inputFilePathList;

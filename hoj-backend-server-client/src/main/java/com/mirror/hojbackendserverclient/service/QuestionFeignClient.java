@@ -31,6 +31,6 @@ public interface QuestionFeignClient{
     @PostMapping("/question_submit/update")
     boolean updateQuestionSubmitById(@RequestBody QuestionSubmit questionSubmit);
 
-    @GetMapping("/judgeCaseFile/list")
+    @PostMapping("/judgeCaseFile/list")
     List<String> getJudgeCaseFileListWithType(@RequestBody JudgeCaseFileQueryRequest judgeCaseFileQueryRequest);
 }

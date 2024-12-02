@@ -142,6 +142,7 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
                 .map(judgeCaseFile ->
                         FileConstant.ROOT_PATH
                                 + Optional.ofNullable(judgeCaseFile.getFileFolder()).orElse("")
+                                + FileConstant.SEPARATOR
                                 + Optional.ofNullable(judgeCaseFile.getFileName()).orElse("")
                                 + extension
                 )
