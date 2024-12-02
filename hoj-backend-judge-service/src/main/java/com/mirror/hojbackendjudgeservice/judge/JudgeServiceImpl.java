@@ -155,4 +155,21 @@ public class JudgeServiceImpl implements JudgeService {
                 submit,3, TimeUnit.MINUTES);
         return submit;
     }
+
+    @Override
+    public QuestionSubmit handleErrorJudge(Long questionSubmitId) {
+        QuestionSubmit questionSubmit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
+        JudgeInfo info = new JudgeInfo();
+        info.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
+        questionSubmit.setJudgeInfo(JSONUtil.toJsonStr(info));
+        questionSubmit.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
+        boolean update = questionFeignClient.updateQuestionSubmitById(questionSubmit);
+        if (!update) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目状态更新错误");
+        }
+        QuestionSubmit submit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
+        redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId,
+                submit,3, TimeUnit.MINUTES);
+        return submit;
+    }
 }

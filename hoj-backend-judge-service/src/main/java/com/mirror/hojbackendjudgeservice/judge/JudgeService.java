@@ -11,4 +11,6 @@ import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
  */
 public interface JudgeService {
     QuestionSubmit doJudge(Long questionSubmitId);
+
+    QuestionSubmit handleErrorJudge(Long questionSubmitId);
 }

@@ -28,6 +28,9 @@ public class MyMessageConsumer {
             judgeService.doJudge(questionSubmitId);
             channel.basicAck(deliveryTag, false);
         } catch (Exception e) {
+            // 失败提交得做错误返回
+            judgeService.handleErrorJudge(questionSubmitId);
+            log.warn("消息队列接收异常：{}",e.getMessage());
             channel.basicNack(deliveryTag, false, false);
         }
     }
