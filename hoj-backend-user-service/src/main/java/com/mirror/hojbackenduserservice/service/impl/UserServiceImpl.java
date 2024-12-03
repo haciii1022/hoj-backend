@@ -10,9 +10,11 @@ import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.CommonConstant;
 import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
+import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendcommon.utils.SqlUtils;
 import com.mirror.hojbackendmodel.model.dto.user.UserQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.User;
+import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
 import com.mirror.hojbackendmodel.model.enums.UserRoleEnum;
 import com.mirror.hojbackendmodel.model.vo.LoginUserVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
@@ -83,6 +85,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
             // 3. 插入数据
             User user = new User();
+            user.setId(SeqUtil.next(BaseSequenceEnum.USER_ID.getName()));
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
             user.setUserName(userName);

@@ -19,7 +19,7 @@ public class JudgeCaseFile implements Serializable {
     /**
      * id
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     /**

@@ -118,6 +118,7 @@ public class QuestionController {
         questionService.validQuestion(question, true);
         judgeCaseGroupService.validJudgeCaseGroup(question.getId());
         User loginUser = userFeignClient.getLoginUser(request);
+        question.setId(SeqUtil.next(BaseSequenceEnum.QUESTION_ID.getName()));
         question.setUserId(loginUser.getId());
         question.setFavourNum(0);
         question.setThumbNum(0);

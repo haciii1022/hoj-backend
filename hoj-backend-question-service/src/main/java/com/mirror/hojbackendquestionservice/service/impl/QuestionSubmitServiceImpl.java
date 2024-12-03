@@ -8,12 +8,14 @@ import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.CommonConstant;
 import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
+import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendcommon.utils.SqlUtils;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitAddRequest;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.entity.User;
+import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
 import com.mirror.hojbackendmodel.model.enums.QuestionSubmitLanguageEnum;
 import com.mirror.hojbackendmodel.model.enums.QuestionSubmitStatusEnum;
 import com.mirror.hojbackendmodel.model.vo.QuestionSubmitVO;
@@ -85,6 +87,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         long userId = loginUser.getId();
         // 每个用户串行题目提交
         QuestionSubmit questionSubmit = new QuestionSubmit();
+        questionSubmit.setId(SeqUtil.next(BaseSequenceEnum.QUESTION_SUBMIT_ID.getName()));
         questionSubmit.setLanguage(language);
         questionSubmit.setCode(questionSubmitAddRequest.getCode());
         questionSubmit.setJudgeInfo("{}");

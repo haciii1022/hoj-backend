@@ -67,7 +67,7 @@ mybatis-plus:
 knife4j:
   enable: true
 sftp:
-  enable: false
+  enable: true
   remoteHost: "${SFTP_REMOTE_HOST}"
   port: "${SFTP_PORT}"
   username: "${SFTP_USERNAME}"
