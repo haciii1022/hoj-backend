@@ -33,6 +33,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -59,6 +61,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+
     /**
      * 题目提交
      *
@@ -99,7 +102,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (!save) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目提交失败");
         }
-        redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit,3, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit, 3, TimeUnit.MINUTES);
         Long questionSubmitId = questionSubmit.getId();
         myMessageProducer.sendMessage("code_exchange", "my_routingKey", String.valueOf(questionSubmitId));
 //        CompletableFuture.runAsync(() -> {
@@ -160,7 +163,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
      * 根据查询条件获取问题提交的分页数据。
      *
      * @param questionSubmitSubmitPage 问题提交的分页对象，包含查询结果集。
-     * @param loginUser              当前登录用户。
+     * @param loginUser                当前登录用户。
      * @return 返回处理后的分页数据对象，包含用户信息丰富的问题提交数据。
      */
     @Override
@@ -179,35 +182,55 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
                 .map(questionSubmitSubmit -> getQuestionSubmitVO(questionSubmitSubmit, loginUser))
                 .collect(Collectors.toList());
         questionSubmitSubmitVOPage.setRecords(questionSubmitVOList);
-        return questionSubmitSubmitVOPage;
+//        return questionSubmitSubmitVOPage;
 //        // 统一获取所有问题提交的用户ID，用于后续批量查询用户信息
-//        // 1. 关联查询用户信息
-//        Set<Long> userIdSet = questionSubmitSubmitList.stream().map(QuestionSubmit::getUserId).collect(Collectors.toSet());
-//
-//        // 根据用户ID集合查询用户信息，并按用户ID分组
-//        Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
-//                .collect(Collectors.groupingBy(User::getId));
-//
-//        // 将问题提交实体转换为VO对象，并填充用户信息
-//        // 填充信息
-//        List<QuestionSubmitVO> questionSubmitSubmitVOList = questionSubmitSubmitList.stream().map(questionSubmitSubmit -> {
-//            QuestionSubmitVO questionSubmitSubmitVO = QuestionSubmitVO.objToVo(questionSubmitSubmit);
-//            Long userId = questionSubmitSubmit.getUserId();
-//            User user = null;
-//            // 如果用户ID对应的用户列表不为空，则取第一个用户（因为用户ID应该是唯一的，这里简化了处理）
-//            if (userIdUserListMap.containsKey(userId)) {
-//                user = userIdUserListMap.get(userId).get(0);
-//            }
-//            // 通过用户服务将用户实体转换为VO对象，并设置到问题提交VO中
-//            questionSubmitSubmitVO.setUserVO(userService.getUserVO(user));
-//            return questionSubmitSubmitVO;
-//        }).collect(Collectors.toList());
-//
-//        // 设置处理后的VO列表到分页对象中
-//        questionSubmitSubmitVOPage.setRecords(questionSubmitSubmitVOList);
+        // 1. 关联查询用户信息和题目信息
+        Set<Long> userIdSet = questionSubmitSubmitList
+                .stream()
+                .map(QuestionSubmit::getUserId)
+                .collect(Collectors.toSet());
+
+        Set<Long> questionIdSet = questionSubmitSubmitList
+                .stream()
+                .map(QuestionSubmit::getQuestionId)
+                .collect(Collectors.toSet());
+
+        // 根据用户ID集合查询用户信息，并按用户ID分组
+        Map<Long, List<User>> userListMap = userService.listByIds(userIdSet)
+                .stream()
+                .collect(Collectors.groupingBy(User::getId));
+
+        // 根据题目ID集合查询用户信息，并按题目ID分组
+        Map<Long, List<Question>> questionListMap = questionService.listByIds(questionIdSet)
+                .stream()
+                .collect(Collectors.groupingBy(Question::getId));
+
+        // 将问题提交实体转换为VO对象，并填充用户信息
+        // 填充信息
+        List<QuestionSubmitVO> questionSubmitSubmitVOList = questionSubmitSubmitList.stream().map(questionSubmitSubmit -> {
+            QuestionSubmitVO questionSubmitSubmitVO = QuestionSubmitVO.objToVo(questionSubmitSubmit);
+            Long userId = questionSubmitSubmit.getUserId();
+            Long questionId = questionSubmitSubmit.getQuestionId();
+            User user = null;
+            Question question = null;
+            // 如果用户ID对应的用户列表不为空，则取第一个用户（因为用户ID应该是唯一的，这里简化了处理）
+            if (userListMap.containsKey(userId)) {
+                user = userListMap.get(userId).get(0);
+            }
+            if (questionListMap.containsKey(questionId)) {
+                question = questionListMap.get(questionId).get(0);
+            }
+            // 通过用户服务将用户实体转换为VO对象，并设置到问题提交VO中
+            questionSubmitSubmitVO.setUserVO(userService.getUserVO(user));
+            questionSubmitSubmitVO.setQuestionVO(questionService.getQuestionVO(question, null));
+            return questionSubmitSubmitVO;
+        }).collect(Collectors.toList());
+
+        // 设置处理后的VO列表到分页对象中
+        questionSubmitSubmitVOPage.setRecords(questionSubmitSubmitVOList);
 
         // 返回处理后的分页数据对象
-//        return questionSubmitSubmitVOPage;
+        return questionSubmitSubmitVOPage;
     }
 
 
