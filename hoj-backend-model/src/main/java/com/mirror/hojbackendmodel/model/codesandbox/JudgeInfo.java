@@ -15,6 +15,12 @@ public class JudgeInfo {
     private String message;
 
     /**
+     * 2024/12/9 新增
+     * 信息详情
+     */
+    private String detail;
+
+    /**
      * 消耗时间（KB）
      */
     private Long time;

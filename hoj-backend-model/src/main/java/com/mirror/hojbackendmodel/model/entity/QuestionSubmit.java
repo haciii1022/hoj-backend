@@ -35,6 +35,7 @@ public class QuestionSubmit implements Serializable {
 
     /**
      * 判题信息（json 对象）
+     * 2.0版本  json对象数组，第一个为总信息，后面的为子信息
      */
     private String judgeInfo;
 

@@ -26,6 +26,12 @@ public class ExecuteCodeResponse {
     private String message;
 
     /**
+     *  2024/12/9 新增
+     * 详情
+     */
+    private String detail;
+
+    /**
      * 执行状态
      */
     private Integer status;
