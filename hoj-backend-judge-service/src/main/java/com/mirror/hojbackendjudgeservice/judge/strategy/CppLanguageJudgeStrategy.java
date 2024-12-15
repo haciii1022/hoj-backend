@@ -5,6 +5,7 @@ import com.mirror.hojbackendcommon.utils.FileUtil;
 import com.mirror.hojbackendmodel.model.codesandbox.JudgeInfo;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
 import com.mirror.hojbackendmodel.model.entity.Question;
+import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.enums.JudgeInfoMessageEnum;
 import org.apache.commons.lang3.StringUtils;
 
@@ -24,6 +25,7 @@ public class CppLanguageJudgeStrategy implements JudgeStrategy {
     public JudgeInfo doJudge(JudgeContext judgeContext) {
         //获取相关配置
         Question question = judgeContext.getQuestion();
+        QuestionSubmit questionSubmit = judgeContext.getQuestionSubmit();
         String judgeConfigStr = question.getJudgeConfig();
         /*
           1、System Error
@@ -54,11 +56,9 @@ public class CppLanguageJudgeStrategy implements JudgeStrategy {
                     judgeInfo.setMessage(JudgeInfoMessageEnum.ACCEPTED.getText());
                 } else {
                     judgeInfo.setMessage(JudgeInfoMessageEnum.WRONG_ANSWER.getText());
-                    nowFlag = 2;
                 }
-            } else {
-                nowFlag = JudgeInfoMessageEnum.getPriorityByText(message);
             }
+            nowFlag = JudgeInfoMessageEnum.getPriorityByText(judgeInfo.getMessage());
             flag = Math.max(flag, nowFlag);
         }
 
@@ -86,7 +86,14 @@ public class CppLanguageJudgeStrategy implements JudgeStrategy {
             default:
                 judgeInfoResult.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
         }
-
+        int acceptCount = 0;
+        for(JudgeInfo judgeInfo: judgeInfoList){
+            if(JudgeInfoMessageEnum.ACCEPTED.getText().equals(judgeInfo.getMessage())){
+                acceptCount++;
+            }
+        }
+        int score = acceptCount * 100 / judgeInfoList.size();
+        questionSubmit.setScore(score);
         return judgeInfoResult;
     }
 }

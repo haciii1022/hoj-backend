@@ -264,7 +264,8 @@ public class QuestionController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Question> questionPage = questionService.page(new Page<>(current, size),
                 questionService.getQueryWrapper(questionQueryRequest));
-        return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
+        Boolean isWithRelatedData = questionQueryRequest.getIsWithRelatedData();
+        return ResultUtils.success(questionService.getQuestionVOPage(questionPage,isWithRelatedData, request));
     }
 
     /**
@@ -288,7 +289,8 @@ public class QuestionController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Question> questionPage = questionService.page(new Page<>(current, size),
                 questionService.getQueryWrapper(questionQueryRequest));
-        return ResultUtils.success(questionService.getQuestionVOPage(questionPage, request));
+        Boolean isWithRelatedData = questionQueryRequest.getIsWithRelatedData();
+        return ResultUtils.success(questionService.getQuestionVOPage(questionPage,isWithRelatedData, request));
     }
 
 
@@ -382,7 +384,7 @@ public class QuestionController {
      * @return
      */
     @GetMapping("/question_submit")
-    public BaseResponse<QuestionSubmitVO> getQuestionSubmitById(@RequestParam("questionSubmitId") Long questionSubmitId) {
+    public BaseResponse<QuestionSubmitVO> getQuestionSubmitById(@RequestParam("questionSubmitId") Long questionSubmitId, HttpServletRequest request) {
         Assert.notNull(questionSubmitId, "提交id不能为空");
         String key = RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId;
         QuestionSubmit questionSubmit = (QuestionSubmit) redisTemplate.opsForValue().get(key);
@@ -477,11 +479,11 @@ public class QuestionController {
         return ResultUtils.success(SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName()));
     }
 
-    @GetMapping("/test")
-    public BaseResponse<Boolean> test(HttpServletRequest request) {
-        String filePath = "/home/ubuntu/hoj/question/1801181035134369793/4_1.out";
-        String filePath2 = "/home/ubuntu/hoj/question/1801181035134369793/4_1.ans";
-        boolean b = FileUtil.compareFilesIgnoringLastLineEnding(filePath, filePath2);
-        return ResultUtils.success(b);
-    }
+//    @GetMapping("/test")
+//    public BaseResponse<Boolean> test(HttpServletRequest request) {
+//        String filePath = "/home/ubuntu/hoj/question/1801181035134369793/4_1.out";
+//        String filePath2 = "/home/ubuntu/hoj/question/1801181035134369793/4_1.ans";
+//        boolean b = FileUtil.compareFilesIgnoringLastLineEnding(filePath, filePath2);
+//        return ResultUtils.success(b);
+//    }
 }

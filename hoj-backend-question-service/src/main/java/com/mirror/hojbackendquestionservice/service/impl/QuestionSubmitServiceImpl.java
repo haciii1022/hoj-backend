@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -148,13 +149,24 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
 
     @Override
-    public QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmitSubmit, User loginUser) {
-        QuestionSubmitVO questionSubmitSubmitVO = QuestionSubmitVO.objToVo(questionSubmitSubmit);
-
+    public QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, User loginUser, boolean isValidate, boolean withRelatedData) {
+        QuestionSubmitVO questionSubmitSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
+        boolean result = true;
+        if (isValidate) {
+            result = isAuthorizedToViewDetail(questionSubmit, loginUser);
+        }
         //脱敏：仅本人和管理员能看见自己（提交userId和登录用户id不同）提交的代码等敏感信息
-        long userId = loginUser.getId();
-        if (userId != questionSubmitSubmit.getUserId() && !userService.isAdmin(loginUser)) {
+        // 2024/12/14 新增 当前用户已通过该题目的话也能看到
+        if (!result) {
+            // 需要脱敏
             questionSubmitSubmitVO.setCode(null);
+        }
+        if (withRelatedData) {
+            User user = userService.getById(questionSubmit.getUserId());
+            questionSubmitSubmitVO.setUserVO(userService.getUserVO(user));
+
+            Question question = questionService.getById(questionSubmit.getQuestionId());
+            questionSubmitSubmitVO.setQuestionVO(questionService.getQuestionVO(question, null));
         }
         return questionSubmitSubmitVO;
     }
@@ -179,7 +191,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
             return questionSubmitSubmitVOPage;
         }
         List<QuestionSubmitVO> questionSubmitVOList = questionSubmitSubmitList.stream()
-                .map(questionSubmitSubmit -> getQuestionSubmitVO(questionSubmitSubmit, loginUser))
+                .map(questionSubmitSubmit -> getQuestionSubmitVO(questionSubmitSubmit, loginUser, true, false))
                 .collect(Collectors.toList());
         questionSubmitSubmitVOPage.setRecords(questionSubmitVOList);
 //        return questionSubmitSubmitVOPage;
@@ -231,6 +243,24 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
         // 返回处理后的分页数据对象
         return questionSubmitSubmitVOPage;
+    }
+
+    /**
+     * 校验当前登录用户有无权限查看判题记录详情信息
+     * 仅限记录提交者、管理员、已经通过当前题目的用户（TODO）
+     *
+     * @param questionSubmit
+     * @param loginUser
+     * @return
+     */
+    @Override
+    public Boolean isAuthorizedToViewDetail(QuestionSubmit questionSubmit, User loginUser) {
+        Long userId = questionSubmit.getUserId();
+        if (!userService.isAdmin(loginUser) && !Objects.equals(userId, loginUser.getId())) {
+            return false;
+        }
+        // TODO 判断当前用户是否通过该题
+        return true;
     }
 
 

@@ -45,6 +45,12 @@ public class QuestionQueryRequest extends PageRequest implements Serializable {
      */
     private Long userId;
 
+    /**
+     * 是否需要获取另外关联数据
+     * 如 该用户在此题的最高得分
+     */
+    private Boolean isWithRelatedData;
+
 
     private static final long serialVersionUID = 1L;
 }

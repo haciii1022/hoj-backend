@@ -6,6 +6,7 @@ import com.mirror.hojbackendmodel.model.codesandbox.JudgeInfo;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeCase;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
 import com.mirror.hojbackendmodel.model.entity.Question;
+import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.enums.JudgeInfoMessageEnum;
 import org.apache.commons.lang3.StringUtils;
 
@@ -26,6 +27,7 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
     public JudgeInfo doJudge(JudgeContext judgeContext) {
         //获取相关配置
         Question question = judgeContext.getQuestion();
+        QuestionSubmit questionSubmit = judgeContext.getQuestionSubmit();
         // 旧版本
 //        List<String> outputList = judgeContext.getOutputList();
 //        List<String> inputList = judgeContext.getInputList();
@@ -57,26 +59,23 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
             if (StringUtils.isNotBlank(message)) {
                 // TODO 判断是不是re，这里先写死都是re
                 judgeInfo.setMessage(JudgeInfoMessageEnum.RUNTIME_ERROR.getText());
-                nowFlag = 5;
             } else {
                 if (memory > judgeConfig.getMemoryLimit() * 1024 * 2) {
-                    //判断是否超时,java默认是两倍
+                    //判断是否超内存,java默认是两倍
                     judgeInfo.setMessage(JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED.getText());
-                    nowFlag = 3;
                 } else if (time > judgeConfig.getTimeLimit()  * 2) {
-                    //判断是否超内存，java默认是两倍
+                    //判断是否超时，java默认是两倍
                     //左边是B，右边是KB
                     judgeInfo.setMessage(JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED.getText());
-                    nowFlag = 4;
                 } else {
                     if (FileUtil.compareFilesIgnoringLastLineEnding(judgeCaseOutputFilePathList.get(i), outputFilePathList.get(i))) {
                         judgeInfo.setMessage(JudgeInfoMessageEnum.ACCEPTED.getText());
                     } else {
                         judgeInfo.setMessage(JudgeInfoMessageEnum.WRONG_ANSWER.getText());
-                        nowFlag = 2;
                     }
                 }
             }
+            nowFlag = JudgeInfoMessageEnum.getPriorityByText(judgeInfo.getMessage());
             flag = Math.max(flag, nowFlag);
         }
 
@@ -102,7 +101,14 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
             default:
                 judgeInfoResult.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
         }
-
+        int acceptCount = 0;
+        for(JudgeInfo judgeInfo: judgeInfoList){
+            if(JudgeInfoMessageEnum.ACCEPTED.getText().equals(judgeInfo.getMessage())){
+                acceptCount++;
+            }
+        }
+        int score = acceptCount * 100 / judgeInfoList.size();
+        questionSubmit.setScore(score);
         return judgeInfoResult;
     }
 }

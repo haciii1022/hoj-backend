@@ -11,11 +11,13 @@ import com.mirror.hojbackendcommon.exception.ThrowUtils;
 import com.mirror.hojbackendcommon.utils.SqlUtils;
 import com.mirror.hojbackendmodel.model.dto.question.QuestionQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.Question;
+import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.entity.User;
 import com.mirror.hojbackendmodel.model.vo.QuestionVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
 import com.mirror.hojbackendquestionservice.mapper.QuestionMapper;
 import com.mirror.hojbackendquestionservice.service.QuestionService;
+import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -29,20 +31,22 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
-* @author Mirror
-* @description 针对表【question(题目)】的数据库操作Service实现
-* @createDate 2024-06-13 10:33:08
-*/
+ * @author Mirror
+ * @description 针对表【question(题目)】的数据库操作Service实现
+ * @createDate 2024-06-13 10:33:08
+ */
 @Service
 public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
-    implements QuestionService {
+        implements QuestionService {
 
     @Resource
     private UserFeignClient userFeignClient;
 
-
+    @Resource
+    private QuestionSubmitService questionSubmitService;
     /**
      * 校验题目是否合法
+     *
      * @param question
      * @param add
      */
@@ -114,7 +118,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         }
         queryWrapper.eq(ObjectUtils.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
-        queryWrapper.eq( "isDelete", false);
+        queryWrapper.eq("isDelete", false);
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
@@ -138,7 +142,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
     }
 
     @Override
-    public Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, HttpServletRequest request) {
+    public Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, Boolean isWithRelatedData, HttpServletRequest request) {
         List<Question> questionList = questionPage.getRecords();
         Page<QuestionVO> questionVOPage = new Page<>(questionPage.getCurrent(), questionPage.getSize(), questionPage.getTotal());
         if (CollUtil.isEmpty(questionList)) {
@@ -148,7 +152,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         Set<Long> userIdSet = questionList.stream().map(Question::getUserId).collect(Collectors.toSet());
         Map<Long, List<User>> userIdUserListMap = userFeignClient.listByIds(userIdSet).stream()
                 .collect(Collectors.groupingBy(User::getId));
-
         // 填充信息
         List<QuestionVO> questionVOList = questionList.stream().map(question -> {
             QuestionVO questionVO = QuestionVO.objToVo(question);
@@ -160,6 +163,30 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
             questionVO.setUserVO(userFeignClient.getUserVO(user));
             return questionVO;
         }).collect(Collectors.toList());
+
+        if (isWithRelatedData) {
+            User loginUser = userFeignClient.getLoginUser(request);
+            if (loginUser == null) {
+                throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+            }
+            Set<Long> questionIds = questionList.stream().map(Question::getId).collect(Collectors.toSet());
+            QueryWrapper<QuestionSubmit> queryWrapper = new QueryWrapper<>();
+            queryWrapper.select("question_id AS questionId", "MAX(score) AS score")
+                    .in("question_id", questionIds)
+                    .eq("user_id", loginUser.getId())
+                    .groupBy("question_id");
+
+            List<Map<String, Object>> result = questionSubmitService.listMaps(queryWrapper);
+            Map<Long, Integer> highestScoreMap = result.stream()
+                    .collect(Collectors.toMap(
+                            map -> (Long) map.get("questionId"),
+                            map -> (Integer) map.get("score")== null ? -1 : (Integer) map.get("score") // 默认值 -1,表示未提交过
+                    ));
+            questionVOList.forEach(item ->{
+                item.setHistoricalScore(highestScoreMap.getOrDefault(item.getId(), -1));
+            });
+        }
+
         questionVOPage.setRecords(questionVOList);
         return questionVOPage;
     }

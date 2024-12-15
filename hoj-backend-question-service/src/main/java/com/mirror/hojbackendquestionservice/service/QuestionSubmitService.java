@@ -38,11 +38,13 @@ public interface QuestionSubmitService extends IService<QuestionSubmit> {
     /**
      * 获取题目封装
      *
-     * @param questionSubmit
-     * @param loginUser
+     * @param questionSubmit  题目提交记录
+     * @param loginUser       登录用户
+     * @param isValidate      是否需要再次校验
+     * @param withRelatedData 是否需要封装关联信息
      * @return
      */
-    QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, User loginUser);
+    QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, User loginUser,  boolean isValidate, boolean withRelatedData);
 
     /**
      * 分页获取题目封装
@@ -52,4 +54,6 @@ public interface QuestionSubmitService extends IService<QuestionSubmit> {
      * @return
      */
     Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitPage, User loginUser);
+
+    Boolean isAuthorizedToViewDetail(QuestionSubmit questionSubmit, User loginUser);
 }

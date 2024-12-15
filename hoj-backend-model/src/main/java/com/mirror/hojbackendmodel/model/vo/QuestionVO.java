@@ -82,6 +82,12 @@ public class QuestionVO implements Serializable {
     private Date updateTime;
 
     /**
+     * 用户在此题的历史得分
+     * -1为未提交过
+     */
+    private Integer historicalScore;
+
+    /**
      * 创建用户信息
      */
     private UserVO userVO;
