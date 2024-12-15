@@ -391,6 +391,7 @@ public class QuestionController {
             redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit, 3, TimeUnit.MINUTES);
         }
         questionSubmit.setCode(null);
+        log.info("QuestionSubmitVO.objToVo(questionSubmit) : {} ",QuestionSubmitVO.objToVo(questionSubmit) );
         return ResultUtils.success(QuestionSubmitVO.objToVo(questionSubmit));
     }
 

@@ -1,6 +1,7 @@
 package com.mirror.hojbackendjudgeservice.judge;
 
 import cn.hutool.json.JSONUtil;
+import com.alibaba.excel.Empty;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.constant.RedisConstant;
@@ -13,7 +14,6 @@ import com.mirror.hojbackendmodel.model.codesandbox.ExecuteCodeRequest;
 import com.mirror.hojbackendmodel.model.codesandbox.ExecuteCodeResponse;
 import com.mirror.hojbackendmodel.model.codesandbox.JudgeInfo;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
-import com.mirror.hojbackendmodel.model.dto.question.JudgeCase;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
@@ -26,8 +26,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -79,7 +78,7 @@ public class JudgeServiceImpl implements JudgeService {
         codeSandbox = new CodeSandboxProxy(codeSandbox);
         String code = questionSubmit.getCode();
         String language = questionSubmit.getLanguage();
-        String judgeCaseStr = question.getJudgeCase();
+//        String judgeCaseStr = question.getJudgeCase();
 //        List<JudgeCase> judgeCaseList = JSONUtil.toList(judgeCaseStr, JudgeCase.class);
 //        List<String> inputList = judgeCaseList.stream().map(JudgeCase::getInput).collect(Collectors.toList());
         String judgeConfigStr = question.getJudgeConfig();
@@ -104,6 +103,7 @@ public class JudgeServiceImpl implements JudgeService {
                 .build();
         //FIXME 这里的ExecuteCodeResponse要修改一下，和沙箱的对齐
         JudgeInfo judgeInfo;
+        JudgeContext judgeContext = null;
         ExecuteCodeResponse executeCodeResponse = codeSandbox.executeCode(executeCodeRequest);
         //如果沙箱执行失败，直接返回
         if(Objects.equals(executeCodeResponse.getStatus(), QuestionSubmitStatusEnum.FAILED.getValue())) {
@@ -117,7 +117,7 @@ public class JudgeServiceImpl implements JudgeService {
             }
         }else{
             //根据沙箱的执行结果，设置题目的判题状态和信息
-            JudgeContext judgeContext = new JudgeContext();
+            judgeContext = new JudgeContext();
             judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
             judgeContext.setJudgeCaseinputFilePathList(judgeCaseInputFilePathList);
             judgeContext.setOutputFilePathList(executeCodeResponse.getOutputFilePathList());
@@ -127,7 +127,7 @@ public class JudgeServiceImpl implements JudgeService {
 //            judgeContext.setOutputList(executeCodeResponse.getOutputList());
 //            judgeContext.setJudgeCaseList(judgeCaseList);
 //            judgeContext.setInputList(inputList);
-            // TODO 总判题信息，后续需要拼接个判题子信息
+            // FIXME 总判题信息，后续需要拼接个判题子信息
             judgeInfo = judgeManager.doJudge(judgeContext);
             //在数据库中更新判题状态
             if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getText())) {
@@ -144,8 +144,11 @@ public class JudgeServiceImpl implements JudgeService {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
             }
         }
-        // TODO questionSubmit.judgeInfo设置成返回的 judgeInfo+judgeInfoList,第一个为总judgeInfo
-        questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfo));
+        // FIXME questionSubmit.judgeInfo设置成返回的 judgeInfo+judgeInfoList,第一个为总judgeInfo
+        List<JudgeInfo> judgeInfoList = new ArrayList<>();
+        judgeInfoList.add(judgeInfo);
+        judgeInfoList.addAll(Optional.ofNullable(judgeContext.getJudgeInfoList()).orElse(Collections.emptyList()));
+        questionSubmitUpdate.setJudgeInfo(JSONUtil.toJsonStr(judgeInfoList));
         update = questionFeignClient.updateQuestionSubmitById(questionSubmitUpdate);
         if (!update) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目状态更新错误");

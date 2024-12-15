@@ -12,60 +12,77 @@ import java.util.stream.Collectors;
  */
 public enum JudgeInfoMessageEnum {
 
-    ACCEPTED("Accepted", "答案正确"),
-    WRONG_ANSWER("Wrong Answer", "答案错误"),
-    COMPILE_ERROR("Compile Error", "编译错误"),
-    MEMORY_LIMIT_EXCEEDED("Memory Limit Exceeded", "内存溢出"),
-    TIME_LIMIT_EXCEEDED("Time Limit Exceeded", "超时"),
-    PRESENTATION_ERROR("Presentation Error", "展示错误"),
-    OUTPUT_LIMIT_EXCEEDED("Output Limit Exceeded", "输出溢出"),
-    WAITING("Waiting", "等待中"),
-    DANGEROUS_OPERATION("Dangerous Operation", "危险操作"),
-    RUNTIME_ERROR("Runtime Error", "运行错误"),
-    SYSTEM_ERROR("System Error", "系统错误");
+    WAITING("Waiting", 0),
+    COMPILE_ERROR("Compile Error", -1),
+    ACCEPTED("Accepted", 1),
+    WRONG_ANSWER("Wrong Answer", 2),
+    MEMORY_LIMIT_EXCEEDED("Memory Limit Exceeded", 3),
+    TIME_LIMIT_EXCEEDED("Time Limit Exceeded", 4),
+    RUNTIME_ERROR("Runtime Error", 5),
+    SYSTEM_ERROR("System Error", 6),
+    PRESENTATION_ERROR("Presentation Error", 7),
+    OUTPUT_LIMIT_EXCEEDED("Output Limit Exceeded", 8),
+    DANGEROUS_OPERATION("Dangerous Operation", 9);
+
+
 
     private final String text;
 
-    private final String value;
+    private final int priority; // 优先级字段
 
-
-    JudgeInfoMessageEnum(String text, String value) {
+    JudgeInfoMessageEnum(String text, int priority) {
         this.text = text;
-        this.value = value;
+        this.priority = priority;
     }
 
     /**
-     * 获取值列表
+     * 获取优先级列表
      *
-     * @return
+     * @return List<Integer>
      */
-    public static List<String> getValues() {
-        return Arrays.stream(values()).map(item -> item.value).collect(Collectors.toList());
+    public static List<Integer> getPriorities() {
+        return Arrays.stream(values()).map(item -> item.priority).collect(Collectors.toList());
     }
 
     /**
-     * 根据 value 获取枚举
+     * 根据优先级获取枚举
      *
-     * @param value
-     * @return
+     * @param priority
+     * @return JudgeInfoMessageEnum
      */
-    public static JudgeInfoMessageEnum getEnumByValue(String value) {
-        if (ObjectUtils.isEmpty(value)) {
-            return null;
-        }
+    public static JudgeInfoMessageEnum getEnumByPriority(int priority) {
         for (JudgeInfoMessageEnum anEnum : JudgeInfoMessageEnum.values()) {
-            if (anEnum.value.equals(value)) {
+            if (anEnum.priority == priority) {
                 return anEnum;
             }
         }
         return null;
     }
-
-    public String getValue() {
-        return value;
+    public int getPriority() {
+        return priority;
     }
 
     public String getText() {
         return text;
     }
+    /**
+     * 根据 text 获取优先级
+     *
+     * @param text 消息文本
+     * @return 优先级，如果未找到对应枚举则返回 -1
+     */
+    public static int getPriorityByText(String text) {
+        if (ObjectUtils.isEmpty(text)) {
+            return -1; // 表示未找到或输入为空
+        }
+        for (JudgeInfoMessageEnum anEnum : JudgeInfoMessageEnum.values()) {
+            if (anEnum.text.equals(text)) {
+                return anEnum.priority;
+            }
+        }
+        return -1; // 未匹配到的情况
+    }
+
+
+
 }

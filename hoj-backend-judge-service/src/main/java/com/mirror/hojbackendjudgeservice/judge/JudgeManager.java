@@ -1,12 +1,10 @@
 package com.mirror.hojbackendjudgeservice.judge;
 
 
-import com.mirror.hojbackendjudgeservice.judge.strategy.DefaultJudgeStrategy;
-import com.mirror.hojbackendjudgeservice.judge.strategy.JavaLanguageJudgeStrategy;
-import com.mirror.hojbackendjudgeservice.judge.strategy.JudgeContext;
-import com.mirror.hojbackendjudgeservice.judge.strategy.JudgeStrategy;
+import com.mirror.hojbackendjudgeservice.judge.strategy.*;
 import com.mirror.hojbackendmodel.model.codesandbox.JudgeInfo;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
+import com.mirror.hojbackendmodel.model.enums.QuestionSubmitLanguageEnum;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,8 +19,10 @@ public class JudgeManager {
     public JudgeInfo doJudge(JudgeContext judgeContext) {
         JudgeStrategy judgeStrategy = new DefaultJudgeStrategy();
         QuestionSubmit questionSubmit = judgeContext.getQuestionSubmit();
-        if ("java".equals(questionSubmit.getLanguage())) {
+        if (QuestionSubmitLanguageEnum.JAVA.getValue().equals(questionSubmit.getLanguage())) {
             judgeStrategy = new JavaLanguageJudgeStrategy();
+        }else if(QuestionSubmitLanguageEnum.CPP.getValue().equals(questionSubmit.getLanguage())){
+            judgeStrategy = new CppLanguageJudgeStrategy();
         }
         return judgeStrategy.doJudge(judgeContext);
     }

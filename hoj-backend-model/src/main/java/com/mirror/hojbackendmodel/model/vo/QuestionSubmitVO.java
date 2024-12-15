@@ -8,6 +8,8 @@ import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 题目提交封装类
@@ -29,9 +31,9 @@ public class QuestionSubmitVO implements Serializable {
      */
     private String code;
     /**
-     * 判题信息（json 对象）
+     * 判题信息（json 对象） 数组
      */
-    private JudgeInfo judgeInfo;
+    private List<JudgeInfo> judgeInfoList;
     /**
      * 判题状态（0 - 待判题、1 - 判题中、2 - 成功、3 - 失败）
      */
@@ -75,9 +77,9 @@ public class QuestionSubmitVO implements Serializable {
         }
         QuestionSubmit questionSubmit = new QuestionSubmit();
         BeanUtils.copyProperties(questionSubmitVO, questionSubmit);
-        JudgeInfo info = questionSubmitVO.getJudgeInfo();
-        if (info != null) {
-            questionSubmit.setJudgeInfo(JSONUtil.toJsonStr(info));
+        List<JudgeInfo> judgeInfoList = questionSubmitVO.getJudgeInfoList();
+        if (judgeInfoList != null) {
+            questionSubmit.setJudgeInfo(JSONUtil.toJsonStr(judgeInfoList));
         }
         return questionSubmit;
     }
@@ -94,8 +96,9 @@ public class QuestionSubmitVO implements Serializable {
         }
         QuestionSubmitVO questionSubmitVO = new QuestionSubmitVO();
         BeanUtils.copyProperties(questionSubmit, questionSubmitVO);
-        questionSubmitVO.setJudgeInfo(JSONUtil.toBean(questionSubmit.getJudgeInfo(), JudgeInfo.class));
+        questionSubmitVO.setJudgeInfoList(JSONUtil.toList(Optional.ofNullable(questionSubmit.getJudgeInfo()).orElse("[]"), JudgeInfo.class));
         return questionSubmitVO;
     }
+
     private static final long serialVersionUID = 1L;
 }

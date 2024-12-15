@@ -37,31 +37,31 @@ public class DefaultJudgeStrategy implements JudgeStrategy {
         //判断是否超时
         if (executeTime > judgeConfig.getTimeLimit()) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED;
-            judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+            judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //判断是否超内存
         if (executeMemory > judgeConfig.getMemoryLimit()) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED;
-            judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+            judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //输出个数不同，直接返回错误
         if (outputList.size() != inputList.size()) {
             judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
-            judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+            judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
             return judgeInfoResult;
         }
         //依次比对每一项输出和预期输出
         for (int i = 0; i < outputList.size(); i++) {
             if (!Objects.equals(outputList.get(i), judgeCaseList.get(i).getOutput())) {
                 judgeInfoMessageEnum = JudgeInfoMessageEnum.WRONG_ANSWER;
-                judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+                judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
                 return judgeInfoResult;
             }
         }
 
-        judgeInfoResult.setMessage(judgeInfoMessageEnum.getValue());
+        judgeInfoResult.setMessage(judgeInfoMessageEnum.getText());
         return judgeInfoResult;
     }
 }

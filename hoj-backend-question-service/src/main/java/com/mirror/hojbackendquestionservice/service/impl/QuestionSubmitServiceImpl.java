@@ -93,7 +93,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         questionSubmit.setId(SeqUtil.next(BaseSequenceEnum.QUESTION_SUBMIT_ID.getName()));
         questionSubmit.setLanguage(language);
         questionSubmit.setCode(questionSubmitAddRequest.getCode());
-        questionSubmit.setJudgeInfo("{}");
+        questionSubmit.setJudgeInfo("[]");
         // 设置初始状态
         questionSubmit.setStatus(QuestionSubmitStatusEnum.WAITING.getValue());
         questionSubmit.setQuestionId(questionSubmitAddRequest.getQuestionId());
