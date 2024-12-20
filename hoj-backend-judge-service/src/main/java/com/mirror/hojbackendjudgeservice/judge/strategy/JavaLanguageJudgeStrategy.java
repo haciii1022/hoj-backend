@@ -63,7 +63,7 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
                 if (memory > judgeConfig.getMemoryLimit() * 1024 * 2) {
                     //判断是否超内存,java默认是两倍
                     judgeInfo.setMessage(JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED.getText());
-                } else if (time > judgeConfig.getTimeLimit()  * 2) {
+                } else if (time > judgeConfig.getTimeLimit() * 2) {
                     //判断是否超时，java默认是两倍
                     //左边是B，右边是KB
                     judgeInfo.setMessage(JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED.getText());
@@ -101,14 +101,18 @@ public class JavaLanguageJudgeStrategy implements JudgeStrategy {
             default:
                 judgeInfoResult.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
         }
-        int acceptCount = 0;
-        for(JudgeInfo judgeInfo: judgeInfoList){
-            if(JudgeInfoMessageEnum.ACCEPTED.getText().equals(judgeInfo.getMessage())){
-                acceptCount++;
+        int totalScore = 0;
+        int totalCount = judgeInfoList.size();
+        for (int index = 0; index < totalCount; index++) {
+            JudgeInfo info = judgeInfoList.get(index);
+            if (JudgeInfoMessageEnum.ACCEPTED.getText().equals(info.getMessage())) {
+                info.setScore(100 / totalCount + ((100 % totalCount) > index ? 1 : 0));
+            } else {
+                info.setScore(0);
             }
+            totalScore += info.getScore();
         }
-        int score = acceptCount * 100 / judgeInfoList.size();
-        questionSubmit.setScore(score);
+        questionSubmit.setScore(totalScore);
         return judgeInfoResult;
     }
 }

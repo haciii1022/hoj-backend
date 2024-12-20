@@ -86,14 +86,18 @@ public class CppLanguageJudgeStrategy implements JudgeStrategy {
             default:
                 judgeInfoResult.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
         }
-        int acceptCount = 0;
-        for(JudgeInfo judgeInfo: judgeInfoList){
-            if(JudgeInfoMessageEnum.ACCEPTED.getText().equals(judgeInfo.getMessage())){
-                acceptCount++;
+        int totalScore = 0;
+        int totalCount = judgeInfoList.size();
+        for (int index = 0; index < totalCount; index++) {
+            JudgeInfo info = judgeInfoList.get(index);
+            if (JudgeInfoMessageEnum.ACCEPTED.getText().equals(info.getMessage())) {
+                info.setScore(100 / totalCount + ((100 % totalCount) > index ? 1 : 0));
+            } else {
+                info.setScore(0);
             }
+            totalScore += info.getScore();
         }
-        int score = acceptCount * 100 / judgeInfoList.size();
-        questionSubmit.setScore(score);
+        questionSubmit.setScore(totalScore);
         return judgeInfoResult;
     }
 }

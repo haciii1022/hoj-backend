@@ -21,6 +21,11 @@ public class JudgeInfo {
     private String detail;
 
     /**
+     * 2024/12/18新增 得分
+     */
+    private Integer score;
+
+    /**
      * 消耗时间（KB）
      */
     private Long time;

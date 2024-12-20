@@ -103,11 +103,13 @@ public class JudgeServiceImpl implements JudgeService {
                 .build();
         //FIXME 这里的ExecuteCodeResponse要修改一下，和沙箱的对齐
         JudgeInfo judgeInfo;
-        JudgeContext judgeContext = null;
+        JudgeContext judgeContext = new JudgeContext();
         ExecuteCodeResponse executeCodeResponse = codeSandbox.executeCode(executeCodeRequest);
         //如果沙箱执行失败，直接返回
         if(Objects.equals(executeCodeResponse.getStatus(), QuestionSubmitStatusEnum.FAILED.getValue())) {
             judgeInfo = new JudgeInfo();
+            judgeInfo.setScore(0);
+            judgeInfo.setDetail(executeCodeResponse.getDetail());
             if (executeCodeResponse.getMessage().equals(JudgeInfoMessageEnum.COMPILE_ERROR.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
                 judgeInfo.setMessage(JudgeInfoMessageEnum.COMPILE_ERROR.getText());
@@ -117,7 +119,6 @@ public class JudgeServiceImpl implements JudgeService {
             }
         }else{
             //根据沙箱的执行结果，设置题目的判题状态和信息
-            judgeContext = new JudgeContext();
             judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
             judgeContext.setJudgeCaseinputFilePathList(judgeCaseInputFilePathList);
             judgeContext.setOutputFilePathList(executeCodeResponse.getOutputFilePathList());
@@ -129,6 +130,7 @@ public class JudgeServiceImpl implements JudgeService {
 //            judgeContext.setInputList(inputList);
             // FIXME 总判题信息，后续需要拼接个判题子信息
             judgeInfo = judgeManager.doJudge(judgeContext);
+            questionSubmitUpdate.setScore(judgeContext.getQuestionSubmit().getScore());
             //在数据库中更新判题状态
             if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
@@ -162,9 +164,11 @@ public class JudgeServiceImpl implements JudgeService {
     @Override
     public QuestionSubmit handleErrorJudge(Long questionSubmitId) {
         QuestionSubmit questionSubmit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
+        List<JudgeInfo> judgeInfoList = new ArrayList<>();
         JudgeInfo info = new JudgeInfo();
         info.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
-        questionSubmit.setJudgeInfo(JSONUtil.toJsonStr(info));
+        judgeInfoList.add(info);
+        questionSubmit.setJudgeInfo(JSONUtil.toJsonStr(judgeInfoList));
         questionSubmit.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
         boolean update = questionFeignClient.updateQuestionSubmitById(questionSubmit);
         if (!update) {

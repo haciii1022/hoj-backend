@@ -21,6 +21,7 @@ import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -42,6 +43,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
     @Resource
     private UserFeignClient userFeignClient;
 
+    @Lazy
     @Resource
     private QuestionSubmitService questionSubmitService;
     /**
@@ -171,10 +173,10 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
             }
             Set<Long> questionIds = questionList.stream().map(Question::getId).collect(Collectors.toSet());
             QueryWrapper<QuestionSubmit> queryWrapper = new QueryWrapper<>();
-            queryWrapper.select("question_id AS questionId", "MAX(score) AS score")
-                    .in("question_id", questionIds)
-                    .eq("user_id", loginUser.getId())
-                    .groupBy("question_id");
+            queryWrapper.select("questionId", "MAX(score) AS score")
+                    .in("questionId", questionIds)
+                    .eq("userId", loginUser.getId())
+                    .groupBy("questionId");
 
             List<Map<String, Object>> result = questionSubmitService.listMaps(queryWrapper);
             Map<Long, Integer> highestScoreMap = result.stream()

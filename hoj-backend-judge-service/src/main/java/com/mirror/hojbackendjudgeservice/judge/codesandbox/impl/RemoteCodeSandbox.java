@@ -29,6 +29,7 @@ public class RemoteCodeSandbox implements CodeSandbox {
     /**
      * 单例模式，双重检查锁定
      * 为了在确保线程安全的同时，尽可能减少同步的开销，提高程序的性能。
+     *
      * @return
      */
     public static RemoteCodeSandbox getInstance() {
@@ -51,14 +52,31 @@ public class RemoteCodeSandbox implements CodeSandbox {
         String url = "http://192.168.1.210:8090/executeCode";
         System.out.println("url: " + url);
         String json = JSONUtil.toJsonStr(executeCodeRequest);
-        String responseStr = HttpUtil.createPost(url)
-                .header(AUTH_REQUEST_HEADER, AUTH_REQUEST_SECRET)
-                .body(json)
-                .execute()
-                .body();
-        if(StringUtils.isBlank(responseStr)){
-            throw new BusinessException(ErrorCode.API_REQUEST_ERROR, "远程代码沙箱请求失败, "+responseStr);
+        // 设置超时时间（单位：毫秒）
+        long timeout = executeCodeRequest.getTimeLimit() + 20000;
+
+        // 捕获 HTTP 请求异常
+        // 捕获超时异常
+        try {
+            // 发起 HTTP POST 请求
+            String responseStr = HttpUtil.createPost(url)
+                    .header(AUTH_REQUEST_HEADER, AUTH_REQUEST_SECRET)
+                    .body(json)
+                    .timeout(Math.toIntExact(timeout)) // 设置超时时间
+                    .execute()
+                    .body();
+
+            // 判断响应是否为空
+            if (StringUtils.isBlank(responseStr)) {
+                throw new BusinessException(ErrorCode.API_REQUEST_ERROR, "远程代码沙箱请求失败，响应为空");
+            }
+
+            // 将响应转换为目标对象
+            return JSONUtil.toBean(responseStr, ExecuteCodeResponse.class);
+
+        } catch (RuntimeException e) {
+            // 捕获其他异常
+            throw new BusinessException(ErrorCode.API_REQUEST_ERROR, "远程代码沙箱请求异常: " + e.getMessage());
         }
-        return JSONUtil.toBean(responseStr, ExecuteCodeResponse.class);
     }
 }

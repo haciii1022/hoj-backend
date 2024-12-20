@@ -57,7 +57,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -377,24 +376,44 @@ public class QuestionController {
         return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage, loginUser));
     }
 
+
     /**
      * 根据 id 获取题目判题信息
-     *
+     * 2、用户在记录列表中点击某一行跳转触发此接口
+     * @param questionSubmitId
+     * @return
+     */
+    @GetMapping("/question_submit/detail")
+    public BaseResponse<QuestionSubmitVO> getQuestionSubmitDetailById(@RequestParam("questionSubmitId") Long questionSubmitId, HttpServletRequest request) {
+        Assert.notNull(questionSubmitId, "提交id不能为空");
+        QuestionSubmit questionSubmit = questionSubmitService.getById(questionSubmitId);
+        User loginUser = userFeignClient.getLoginUser(request);
+        Boolean b = questionSubmitService.isAuthorizedToViewDetail(questionSubmit, loginUser);
+        if(!b) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR,"无权限查看判题记录详情");
+        }
+        QuestionSubmitVO submitVO = questionSubmitService.getQuestionSubmitVO(questionSubmit, loginUser, false, true);
+        return ResultUtils.success(submitVO);
+    }
+
+    /**
+     * 根据 id 获取题目判题信息
+     * 1、用户提交代码在轮询判题结果
      * @param questionSubmitId
      * @return
      */
     @GetMapping("/question_submit")
-    public BaseResponse<QuestionSubmitVO> getQuestionSubmitById(@RequestParam("questionSubmitId") Long questionSubmitId, HttpServletRequest request) {
+    public BaseResponse<QuestionSubmitVO> getQuestionSubmitVoById(@RequestParam("questionSubmitId") Long questionSubmitId, HttpServletRequest request) {
         Assert.notNull(questionSubmitId, "提交id不能为空");
         String key = RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId;
         QuestionSubmit questionSubmit = (QuestionSubmit) redisTemplate.opsForValue().get(key);
+        User loginUser = userFeignClient.getLoginUser(request);
         if (questionSubmit == null) {
             questionSubmit = questionSubmitService.getById(questionSubmitId);
             redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit, 3, TimeUnit.MINUTES);
         }
-        questionSubmit.setCode(null);
-        log.info("QuestionSubmitVO.objToVo(questionSubmit) : {} ",QuestionSubmitVO.objToVo(questionSubmit) );
-        return ResultUtils.success(QuestionSubmitVO.objToVo(questionSubmit));
+        QuestionSubmitVO submitVO = questionSubmitService.getQuestionSubmitVO(questionSubmit, loginUser, false, false);
+        return ResultUtils.success(submitVO);
     }
 
     @GetMapping("/judgeCaseGroup/get")
