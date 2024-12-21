@@ -44,6 +44,11 @@ public class QuestionAddRequest implements Serializable {
      */
     private JudgeConfig judgeConfig;
 
+    /**
+     * 是否隐藏
+     */
+    private Integer isHidden;
+
 
     private static final long serialVersionUID = 1L;
 }

@@ -90,6 +90,11 @@ public class Question implements Serializable {
     private Date updateTime;
 
     /**
+     * 是否隐藏
+     */
+    private Integer isHidden;
+
+    /**
      * 是否删除
      */
     @TableLogic

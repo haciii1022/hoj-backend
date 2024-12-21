@@ -51,6 +51,11 @@ public class QuestionQueryRequest extends PageRequest implements Serializable {
      */
     private Boolean isWithRelatedData;
 
+    /**
+     * 是否隐藏
+     */
+    private Integer isHidden;
+
 
     private static final long serialVersionUID = 1L;
 }
