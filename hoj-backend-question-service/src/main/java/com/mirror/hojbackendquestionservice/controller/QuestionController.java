@@ -207,6 +207,9 @@ public class QuestionController {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
         User loginUser = userFeignClient.getLoginUser(request);
+        if (question.getIsHidden() == 1 && !userFeignClient.isAdmin(loginUser)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "题目已经删除或被隐藏");
+        }
         if (!question.getUserId().equals(loginUser.getId()) && !userFeignClient.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
@@ -227,6 +230,10 @@ public class QuestionController {
         Question question = questionService.getById(id);
         if (question == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
+        }
+        User loginUser = userFeignClient.getLoginUser(request);
+        if (question.getIsHidden() == 1 && !userFeignClient.isAdmin(loginUser)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "题目已经删除或被隐藏");
         }
         return ResultUtils.success(questionService.getQuestionVO(question, request));
     }
@@ -264,7 +271,7 @@ public class QuestionController {
         Page<Question> questionPage = questionService.page(new Page<>(current, size),
                 questionService.getQueryWrapper(questionQueryRequest));
         Boolean isWithRelatedData = questionQueryRequest.getIsWithRelatedData();
-        return ResultUtils.success(questionService.getQuestionVOPage(questionPage,isWithRelatedData, request));
+        return ResultUtils.success(questionService.getQuestionVOPage(questionPage, isWithRelatedData, request));
     }
 
     /**
@@ -289,7 +296,7 @@ public class QuestionController {
         Page<Question> questionPage = questionService.page(new Page<>(current, size),
                 questionService.getQueryWrapper(questionQueryRequest));
         Boolean isWithRelatedData = questionQueryRequest.getIsWithRelatedData();
-        return ResultUtils.success(questionService.getQuestionVOPage(questionPage,isWithRelatedData, request));
+        return ResultUtils.success(questionService.getQuestionVOPage(questionPage, isWithRelatedData, request));
     }
 
 
@@ -300,6 +307,7 @@ public class QuestionController {
      * @param request
      * @return
      */
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     @PostMapping("/edit")
     public BaseResponse<Boolean> editQuestion(@RequestBody QuestionEditRequest questionEditRequest, HttpServletRequest request) {
         if (questionEditRequest == null || questionEditRequest.getId() <= 0) {
@@ -389,8 +397,8 @@ public class QuestionController {
         QuestionSubmit questionSubmit = questionSubmitService.getById(questionSubmitId);
         User loginUser = userFeignClient.getLoginUser(request);
         Boolean b = questionSubmitService.isAuthorizedToViewDetail(questionSubmit, loginUser);
-        if(!b) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR,"无权限查看判题记录详情");
+        if (!b) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "无权限查看判题记录详情");
         }
         QuestionSubmitVO submitVO = questionSubmitService.getQuestionSubmitVO(questionSubmit, loginUser, false, true);
         return ResultUtils.success(submitVO);
@@ -483,7 +491,7 @@ public class QuestionController {
         Integer type = judgeCaseFile.getType();
         String extension = type == 0 ? ".in" : ".out";
         String fileName = judgeCaseFile.getFileFolder() + File.separator + judgeCaseFile.getFileName() + extension;
-        String fullFileName = FileConstant.ROOT_PATH  + fileName;
+        String fullFileName = FileConstant.ROOT_PATH + fileName;
         org.springframework.core.io.Resource resource = FileUtil.downloadFileViaSFTP(fullFileName);
         // 设置下载文件的响应头
         String contentDisposition = "attachment; filename=\"" + fileName + "\"";

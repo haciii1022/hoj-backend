@@ -72,18 +72,19 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         if (StringUtils.isNotBlank(title) && title.length() > 80) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "标题过长");
         }
-        if (StringUtils.isNotBlank(content) && content.length() > 8192) {
+        if (StringUtils.isNotBlank(content) && content.length() > 8192 * 10) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "内容过长");
         }
-        if (StringUtils.isNotBlank(answer) && answer.length() > 8192) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "答案过长");
-        }
-        if (StringUtils.isNotBlank(judgeCase) && judgeCase.length() > 8192) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "判题用例过长");
-        }
-        if (StringUtils.isNotBlank(judgeConfig) && judgeConfig.length() > 8192) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "判题配置过长");
-        }
+        // 未使用
+//        if (StringUtils.isNotBlank(answer) && answer.length() > 8192) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "答案过长");
+//        }
+//        if (StringUtils.isNotBlank(judgeCase) && judgeCase.length() > 8192) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "判题用例过长");
+//        }
+//        if (StringUtils.isNotBlank(judgeConfig) && judgeConfig.length() > 8192) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "判题配置过长");
+//        }
     }
 
     /**
@@ -99,6 +100,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
             return queryWrapper;
         }
         Long id = questionQueryRequest.getId();
+        Integer isHidden = questionQueryRequest.getIsHidden();
         String title = questionQueryRequest.getTitle();
         String content = questionQueryRequest.getContent();
         List<String> tags = questionQueryRequest.getTags();
@@ -118,9 +120,10 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
                 queryWrapper.like("tags", "\"" + tag + "\"");
             }
         }
+        queryWrapper.eq(ObjectUtils.isNotEmpty(isHidden), "isHidden", isHidden);
         queryWrapper.eq(ObjectUtils.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
-        queryWrapper.eq("isDelete", false);
+//        queryWrapper.eq("isDelete", false);
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
