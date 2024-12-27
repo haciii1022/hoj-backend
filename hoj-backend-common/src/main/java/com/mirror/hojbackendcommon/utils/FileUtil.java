@@ -1,6 +1,6 @@
 package com.mirror.hojbackendcommon.utils;
 
-import cn.hutool.extra.spring.SpringUtil;;
+import cn.hutool.extra.spring.SpringUtil;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
