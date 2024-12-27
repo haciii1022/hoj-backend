@@ -52,9 +52,9 @@ public class QuestionQueryRequest extends PageRequest implements Serializable {
     private Boolean isWithRelatedData;
 
     /**
-     * 是否隐藏
+     * 是否包含隐藏题目
      */
-    private Integer isHidden;
+    private Boolean includeHiddenQuestions;
 
 
     private static final long serialVersionUID = 1L;

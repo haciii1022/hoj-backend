@@ -28,6 +28,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -100,7 +101,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
             return queryWrapper;
         }
         Long id = questionQueryRequest.getId();
-        Integer isHidden = questionQueryRequest.getIsHidden();
+        Boolean includeHiddenQuestions = questionQueryRequest.getIncludeHiddenQuestions();
         String title = questionQueryRequest.getTitle();
         String content = questionQueryRequest.getContent();
         List<String> tags = questionQueryRequest.getTags();
@@ -120,7 +121,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
                 queryWrapper.like("tags", "\"" + tag + "\"");
             }
         }
-        queryWrapper.eq(ObjectUtils.isNotEmpty(isHidden), "isHidden", isHidden);
+        queryWrapper.eq(Objects.equals(includeHiddenQuestions,false), "isHidden", 0);
         queryWrapper.eq(ObjectUtils.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
 //        queryWrapper.eq("isDelete", false);
