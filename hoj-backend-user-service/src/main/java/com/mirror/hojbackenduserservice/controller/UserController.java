@@ -233,7 +233,6 @@ public class UserController {
      * @return
      */
     @GetMapping("/get/my")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<User> getUserByRequest(HttpServletRequest request) {
         User user = userService.getLoginUser(request);
         ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR);
@@ -326,12 +325,11 @@ public class UserController {
         return ResultUtils.success(true);
     }
 
-
-    @PostMapping("/upload")
-    public BaseResponse<String> uploadFile(@RequestBody MultipartFile file) {
-        String originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
-        return ResultUtils.success(OssUtil.uploadFile(file, null, FileConstant.USER_AVATAR_PREFIX));
-    }
+//    @PostMapping("/upload")
+//    public BaseResponse<String> uploadFile(@RequestBody MultipartFile file) {
+//        String originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
+//        return ResultUtils.success(OssUtil.uploadFile(file, null, FileConstant.USER_AVATAR_PREFIX));
+//    }
 
     /**
      * 更新头像(仅限当前登录用户更新)
@@ -376,25 +374,4 @@ public class UserController {
         return ResultUtils.success(true);
     }
 
-    @PostMapping("/deleteFile")
-    public BaseResponse<Boolean> deleteFile(@RequestParam("fileName") String fileName) {
-        return ResultUtils.success(OssUtil.deleteFile(fileName));
-    }
-
-    @GetMapping("/test")
-    public BaseResponse<Boolean> test() {
-        boolean flag = true;
-        try {
-            Long questionId1 = SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName());
-            Long questionId2 = SeqUtil.next(BaseSequenceEnum.QUESTION_ID.getName());
-            Long questionId3 = SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName());
-            System.out.println(questionId1);
-            System.out.println(questionId2);
-            System.out.println(questionId3);
-        }catch (Exception e){
-            e.printStackTrace();
-            flag=false;
-        }
-        return ResultUtils.success(flag);
-    }
 }

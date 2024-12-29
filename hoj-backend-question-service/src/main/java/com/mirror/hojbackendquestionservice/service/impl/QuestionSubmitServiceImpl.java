@@ -1,6 +1,7 @@
 package com.mirror.hojbackendquestionservice.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -25,6 +26,7 @@ import com.mirror.hojbackendquestionservice.service.QuestionService;
 import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.JudgeFeignClient;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
@@ -32,10 +34,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -44,15 +43,12 @@ import java.util.stream.Collectors;
  * @description 针对表【question_submit(题目提交)】的数据库操作Service实现
  * @createDate 2024-06-13 10:35:37
  */
+@Slf4j
 @Service
 public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper, QuestionSubmit>
         implements QuestionSubmitService {
     @Resource
     private QuestionService questionService;
-
-    @Resource
-    @Lazy
-    private JudgeFeignClient judgeService;
 
     @Resource
     private UserFeignClient userService;
@@ -261,6 +257,46 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         }
         // TODO 判断当前用户是否通过该题
         return true;
+    }
+
+    @Override
+    public Map<String, Object> getQuestionScoreData(Long questionId) {
+        // 获取分数分布
+
+        List<Map<String, Object>> scoreDistribution = this.getBaseMapper().getScoreDistribution(questionId);
+        log.info("scoreDistribution: {}", scoreDistribution);
+        // 获取其他统计数据
+        Map<String, Object> statistics = this.getBaseMapper().getOtherStatistics(questionId);
+        log.info("statistics: {}", statistics);
+        Map<String, Long> scoreMap = new LinkedHashMap<>();
+        if(CollectionUtil.isEmpty(statistics) || CollectionUtil.isEmpty(scoreDistribution)){
+            return  Collections.emptyMap();
+        }
+        for(Map<String,Object> subMap: scoreDistribution){
+            String scoreRange = String.valueOf(subMap.get("score_range"));
+            long count = (Long)subMap.get("count");
+            scoreMap.put(scoreRange,count);
+        }
+        log.info("scoreMap: {}",scoreMap);
+        // 最大段
+        String maxSegment = scoreMap.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("NA"); // 默认值
+
+        // 最小段
+        String minSegment = scoreMap.entrySet().stream()
+                .min(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("NA"); // 默认值
+
+        Map<String, Object> resultMap = new LinkedHashMap<>();
+        resultMap.put("scoreDistribution", scoreMap);
+        resultMap.put("maxSegment", maxSegment);
+        resultMap.put("minSegment", minSegment);
+        resultMap.put("averageScore", statistics.getOrDefault("averageScore", "0.00"));
+        resultMap.put("mostUsedLanguage", statistics.getOrDefault("mostUsedLanguage", "java"));
+        return resultMap;
     }
 
 

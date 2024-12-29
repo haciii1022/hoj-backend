@@ -41,6 +41,7 @@ import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Example;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -57,7 +58,10 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -96,6 +100,7 @@ public class QuestionController {
      * @return
      */
     @PostMapping("/add")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addQuestion(@RequestBody QuestionAddRequest questionAddRequest, HttpServletRequest request) {
         if (questionAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -137,6 +142,7 @@ public class QuestionController {
      * @return
      */
     @PostMapping("/delete")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteQuestion(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -198,6 +204,7 @@ public class QuestionController {
      * @return
      */
     @GetMapping("/get")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Question> getQuestionById(Long id, HttpServletRequest request) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -365,6 +372,19 @@ public class QuestionController {
     }
 
     /**
+     * 返回题目提交记录的统计数据，供前端Echarts展示。
+     * @param questionId 题目ID
+     * @return 包含统计数据的Map
+     */
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @GetMapping("/question_submit/data")
+    public Map<String, Object> getQuestionScoreData(@RequestParam("questionId") Long questionId) {
+        ThrowUtils.throwIf(questionId <= 0, ErrorCode.PARAMS_ERROR);
+        return questionSubmitService.getQuestionScoreData(questionId);
+    }
+
+
+    /**
      * 分页获取题目提交列表（除管理员外，普通用户只能看到非答案、提交代码等公开信息）
      *
      * @param questionSubmitQueryRequest
@@ -425,6 +445,7 @@ public class QuestionController {
     }
 
     @GetMapping("/judgeCaseGroup/get")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<List<JudgeCaseGroupVO>> getJudgeCaseGroupListByQuestionId(@RequestParam("questionId") Long questionId, HttpServletRequest request) {
         if (questionId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -444,6 +465,7 @@ public class QuestionController {
      * @return
      */
     @PostMapping("/judgeCaseGroup/add")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addJudgeCaseGroup(@RequestBody JudgeCaseGroupAddRequest judgeCaseGroupAddRequest, HttpServletRequest request) {
         User loginUser = userFeignClient.getLoginUser(request);
         JudgeCaseGroup judgeCaseGroup = new JudgeCaseGroup();
@@ -465,6 +487,7 @@ public class QuestionController {
      * @return
      */
     @PostMapping("/judgeCaseFile/add")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addJudgeCaseFile(@RequestPart("file") MultipartFile file,
                                                @RequestPart("jsonData") String jsonData, HttpServletRequest request) {
         JudgeCaseFileAddRequest judgeCaseFileAddRequest = JSONUtil.toBean(jsonData, JudgeCaseFileAddRequest.class);
@@ -473,18 +496,21 @@ public class QuestionController {
     }
 
     @GetMapping("/judgeCaseGroup/delete")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteJudgeCaseGroup(@RequestParam("groupId") Long groupId, HttpServletRequest request) {
         ThrowUtils.throwIf(groupId <= 0, ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(judgeCaseGroupService.deleteJudgeCaseGroup(groupId));
     }
 
     @GetMapping("/judgeCaseFile/delete")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> deleteJudgeCaseFile(@RequestParam("fileId") Long fileId, HttpServletRequest request) {
         ThrowUtils.throwIf(fileId <= 0, ErrorCode.PARAMS_ERROR);
         return ResultUtils.success(judgeCaseFileService.deleteJudgeCaseFile(fileId));
     }
 
     @GetMapping("/judgeCaseFile/download")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public ResponseEntity<org.springframework.core.io.Resource> downloadJudgeCaseFile(@RequestParam("fileId") Long fileId, HttpServletRequest request) {
         ThrowUtils.throwIf(fileId <= 0, ErrorCode.PARAMS_ERROR);
         JudgeCaseFile judgeCaseFile = judgeCaseFileService.getById(fileId);
@@ -506,11 +532,4 @@ public class QuestionController {
         return ResultUtils.success(SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName()));
     }
 
-//    @GetMapping("/test")
-//    public BaseResponse<Boolean> test(HttpServletRequest request) {
-//        String filePath = "/home/ubuntu/hoj/question/1801181035134369793/4_1.out";
-//        String filePath2 = "/home/ubuntu/hoj/question/1801181035134369793/4_1.ans";
-//        boolean b = FileUtil.compareFilesIgnoringLastLineEnding(filePath, filePath2);
-//        return ResultUtils.success(b);
-//    }
 }

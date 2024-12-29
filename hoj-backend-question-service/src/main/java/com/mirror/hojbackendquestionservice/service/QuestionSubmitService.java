@@ -8,6 +8,9 @@ import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitQueryRe
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.entity.User;
 import com.mirror.hojbackendmodel.model.vo.QuestionSubmitVO;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Map;
 
 
 /**
@@ -56,4 +59,11 @@ public interface QuestionSubmitService extends IService<QuestionSubmit> {
     Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitPage, User loginUser);
 
     Boolean isAuthorizedToViewDetail(QuestionSubmit questionSubmit, User loginUser);
+
+    /**
+     * 返回题目提交记录的统计数据，供前端Echarts展示。
+     * @param questionId
+     * @return
+     */
+    Map<String, Object> getQuestionScoreData(Long questionId);
 }

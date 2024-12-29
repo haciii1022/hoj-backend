@@ -1,4 +1,4 @@
-package com.mirror.hojbackendgateway.aop;
+package com.mirror.hojbackenduserservice.aop;
 
 
 import com.mirror.hojbackendcommon.annotation.AuthCheck;

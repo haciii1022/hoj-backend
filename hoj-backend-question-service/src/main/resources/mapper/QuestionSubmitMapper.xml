@@ -23,4 +23,45 @@
         userId,createTime,updateTime,
         isDelete
     </sql>
+    <!-- 统计返回的结果映射 -->
+    <resultMap id="statisticsResultMap" type="java.util.Map">
+        <result property="averageScore" column="average_score" />
+        <result property="maxScore" column="max_score" />
+        <result property="minScore" column="min_score" />
+        <result property="mostUsedLanguage" column="most_used_language" />
+    </resultMap>
+    <!-- 查询分数分布 -->
+    <select id="getScoreDistribution" resultType="java.util.Map">
+        SELECT
+            CASE
+                WHEN score BETWEEN 0 AND 20 THEN '0-20'
+                WHEN score BETWEEN 21 AND 40 THEN '21-40'
+                WHEN score BETWEEN 41 AND 60 THEN '41-60'
+                WHEN score BETWEEN 61 AND 80 THEN '61-80'
+                WHEN score BETWEEN 81 AND 100 THEN '81-100'
+                END AS score_range,
+            COUNT(*) AS count
+        FROM question_submit
+        WHERE questionId = #{questionId}
+        GROUP BY score_range
+        ORDER BY FIELD(score_range, '0-20', '21-40', '41-60', '61-80', '81-100');
+    </select>
+
+    <!-- 查询其他统计数据：平均分，最大/最小分数，最常用语言 -->
+    <select id="getOtherStatistics" resultMap="statisticsResultMap">
+        SELECT
+            AVG(score) AS average_score,             -- 计算所有提交的平均分
+--             MAX(score) AS max_score,                -- 最大分数
+--             MIN(score) AS min_score,                -- 最小分数
+            (SELECT language                         -- 子查询获取最常用语言
+        FROM question_submit
+        WHERE questionId = #{questionId}
+        GROUP BY language
+        ORDER BY COUNT(language) DESC
+            LIMIT 1) AS most_used_language
+        FROM question_submit
+        WHERE questionId = #{questionId};
+    </select>
+
+
 </mapper>
