@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
-    @Resource
-    private OSS ossClient;
+//    @Resource
+//    private OSS ossClient;
 
     @Value("${aliyun.oss.bucketName}")
     private String bucketName;
@@ -257,39 +257,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return queryWrapper;
     }
 
+    @Deprecated
     @Override
     public String uploadFile(MultipartFile file, String originalFilename) {
-        //获取原生文件名
-        String fileName = file.getOriginalFilename();
-        //拼装OSS上存储的路径
-//        String fileName = file.getName();
-        String extension = fileName.substring(fileName.lastIndexOf("."));
-        String contentType = file.getContentType();
-        //在OSS上bucket下的文件名
-        String finalFileName = Optional.ofNullable(originalFilename).orElse(String.valueOf(UUID.fastUUID()));
-        String uploadFileName = "hoj/user" + "/" + finalFileName + extension;
-        //获取文件后缀
-        try {
-            PutObjectResult result = ossClient.putObject(bucketName, uploadFileName, file.getInputStream());
-            //拼装返回路径
-            if (result != null) {
-                return "https://"+bucketName+"."+endpoint+"/"+uploadFileName;
-            }
-        } catch (IOException e) {
-            log.error("文件上传失败:{}",e.getMessage());
-        }
+//        //获取原生文件名
+//        String fileName = file.getOriginalFilename();
+//        //拼装OSS上存储的路径
+////        String fileName = file.getName();
+//        String extension = fileName.substring(fileName.lastIndexOf("."));
+//        String contentType = file.getContentType();
+//        //在OSS上bucket下的文件名
+//        String finalFileName = Optional.ofNullable(originalFilename).orElse(String.valueOf(UUID.fastUUID()));
+//        String uploadFileName = "hoj/user" + "/" + finalFileName + extension;
+//        //获取文件后缀
+//        try {
+//            PutObjectResult result = ossClient.putObject(bucketName, uploadFileName, file.getInputStream());
+//            //拼装返回路径
+//            if (result != null) {
+//                return "https://"+bucketName+"."+endpoint+"/"+uploadFileName;
+//            }
+//        } catch (IOException e) {
+//            log.error("文件上传失败:{}",e.getMessage());
+//        }
         return "fail";
     }
 
+    @Deprecated
     @Override
     public Boolean deleteFile(String fileUrl) {
         boolean flag = true;
-        try {
-            ossClient.deleteObject(bucketName, fileUrl);
-        }catch (Exception e){
-            log.error("文件删除失败:{}",e.getMessage());
-            flag = false;
-        }
+//        try {
+//            ossClient.deleteObject(bucketName, fileUrl);
+//        }catch (Exception e){
+//            log.error("文件删除失败:{}",e.getMessage());
+//            flag = false;
+//        }
         return flag;
     }
 }
