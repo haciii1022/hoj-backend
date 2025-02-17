@@ -8,31 +8,25 @@ import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
 import com.mirror.hojbackendcommon.utils.FileUtil;
-import com.mirror.hojbackendcommon.utils.OssUtil;
 import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
-import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.User;
 import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
-import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
 import com.mirror.hojbackendquestionservice.mapper.JudgeCaseFileMapper;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseFileService;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseGroupService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.jni.File;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -67,7 +61,8 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
 //        String result = OssUtil.uploadFile(file, fileName, pathPrefix);
         try {
             FileUtil.saveFileViaSFTP(file, FileConstant.ROOT_PATH + pathPrefix + "/" + fileName + extension);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new BusinessException(ErrorCode.UPLOAD_FILE_ERROR);
         }
         // 原先OSS的上传逻辑
@@ -92,7 +87,8 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
             }
             judgeCaseFile.setId(fileList.get(0).getId());
             log.info("updateJudgeCaseFile: {}", judgeCaseFile);
-        } else {
+        }
+        else {
             judgeCaseFile.setId(SeqUtil.next(BaseSequenceEnum.JUDGE_CASE_FILE_ID.getName()));
             log.info("addJudgeCaseFile: {}", judgeCaseFile);
         }
@@ -111,7 +107,8 @@ public class JudgeCaseFileServiceImpl extends ServiceImpl<JudgeCaseFileMapper, J
         String fullFilePath = FileConstant.ROOT_PATH + fileName;
         try {
             FileUtil.deleteFileViaSFTP(fullFilePath);
-        } catch (SftpException e) {
+        }
+        catch (SftpException e) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR);
         }
         // 原先OSS的删除逻辑

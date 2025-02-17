@@ -46,10 +46,11 @@ server:
     # cookie 30 天过期
     session:
       cookie:
-#        same-site: none # 设置 SameSite=None
+        same-site: none # 设置 SameSite=None
 #        secure: true    # 确保 Secure
         max-age: 2592000
         path: /api
+        domain: 47.115.53.171
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false

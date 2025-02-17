@@ -52,9 +52,10 @@ server:
     session:
       cookie:
         same-site: none # 设置 SameSite=None
-        secure: true    # 确保 Secure
+#        secure: true    # 确保 Secure
         max-age: 2592000
         path: /api
+        domain: haciii-oj.online
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false

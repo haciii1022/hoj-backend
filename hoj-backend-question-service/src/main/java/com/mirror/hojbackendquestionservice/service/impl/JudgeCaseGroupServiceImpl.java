@@ -13,14 +13,19 @@ import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
 import com.mirror.hojbackendquestionservice.mapper.JudgeCaseGroupMapper;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseFileService;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseGroupService;
-import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -32,8 +37,6 @@ import java.util.stream.Collectors;
 public class JudgeCaseGroupServiceImpl extends ServiceImpl<JudgeCaseGroupMapper, JudgeCaseGroup>
         implements JudgeCaseGroupService {
 
-    @Resource
-    private UserFeignClient userFeignClient;
 
     @Resource
     private JudgeCaseFileService judgeCaseFileService;
