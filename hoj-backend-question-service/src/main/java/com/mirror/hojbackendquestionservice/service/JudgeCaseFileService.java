@@ -2,6 +2,7 @@ package com.mirror.hojbackendquestionservice.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileBatchImportRequest;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,8 @@ public interface JudgeCaseFileService extends IService<JudgeCaseFile> {
      * @return
      */
     Long saveOrUpdateFile(MultipartFile file, JudgeCaseFileAddRequest judgeCaseFileAddRequest, HttpServletRequest request);
+
+    Boolean batchImportFile(MultipartFile file, JudgeCaseFileBatchImportRequest judgeCaseFileBatchImportRequest, HttpServletRequest request);
 
     Boolean deleteJudgeCaseFile(Long fileId);
 

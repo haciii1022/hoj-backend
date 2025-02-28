@@ -3,6 +3,7 @@ package com.mirror.hojbackendquestionservice.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
 import com.mirror.hojbackendmodel.model.entity.Question;
+import com.mirror.hojbackendmodel.model.entity.User;
 import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
 import com.sun.org.apache.xpath.internal.operations.Bool;
 
@@ -27,6 +28,8 @@ public interface JudgeCaseGroupService extends IService<JudgeCaseGroup> {
     List<JudgeCaseGroupVO> getJudgeCaseGroupList(Question qustion, HttpServletRequest request);
 
     Boolean deleteJudgeCaseGroup(Long groupId);
+
+    Long addJudgeCaseGroup(Long questionId, User loginUser);
 
 
 }

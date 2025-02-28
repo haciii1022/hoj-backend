@@ -16,6 +16,7 @@ import com.mirror.hojbackendcommon.exception.ThrowUtils;
 import com.mirror.hojbackendcommon.utils.FileUtil;
 import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileAddRequest;
+import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileBatchImportRequest;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseGroupAddRequest;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeCase;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
@@ -479,9 +480,27 @@ public class QuestionController {
     }
 
     /**
+     * 批量导入
+     *
+     * @param file zip文件
+     * @param jsonData
+     * @param request
+     * @return
+     */
+    @PostMapping("/judgeCaseFile/batchImport")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @Transactional
+    public BaseResponse<Boolean> batchImportFile(@RequestPart("file") MultipartFile file,
+                                                 @RequestPart("jsonData") String jsonData, HttpServletRequest request) {
+        JudgeCaseFileBatchImportRequest batchImportRequest = JSONUtil.toBean(jsonData, JudgeCaseFileBatchImportRequest.class);
+        ThrowUtils.throwIf(file.isEmpty(), ErrorCode.UNPROCESSABLE_ENTITY);
+        return ResultUtils.success(judgeCaseFileService.batchImportFile(file,batchImportRequest,request));
+    }
+
+    /**
      * 新增/更新判题用例文件
      *
-     * @param file
+     * @param file .in .out文件
      * @param jsonData
      * @param request
      * @return

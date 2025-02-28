@@ -6,13 +6,18 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
+import com.mirror.hojbackendcommon.exception.ThrowUtils;
+import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseFile;
 import com.mirror.hojbackendmodel.model.entity.JudgeCaseGroup;
 import com.mirror.hojbackendmodel.model.entity.Question;
+import com.mirror.hojbackendmodel.model.entity.User;
+import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
 import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
 import com.mirror.hojbackendquestionservice.mapper.JudgeCaseGroupMapper;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseFileService;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseGroupService;
+import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +42,8 @@ import java.util.stream.Collectors;
 public class JudgeCaseGroupServiceImpl extends ServiceImpl<JudgeCaseGroupMapper, JudgeCaseGroup>
         implements JudgeCaseGroupService {
 
+    @Resource
+    private UserFeignClient userFeignClient;
 
     @Resource
     private JudgeCaseFileService judgeCaseFileService;
@@ -117,5 +124,17 @@ public class JudgeCaseGroupServiceImpl extends ServiceImpl<JudgeCaseGroupMapper,
             fileList.forEach(item -> judgeCaseFileService.deleteJudgeCaseFile(item.getId()));
         }
         return this.removeById(groupId);
+    }
+
+    @Override
+    public Long addJudgeCaseGroup(Long questionId, User loginUser) {
+        JudgeCaseGroup judgeCaseGroup = new JudgeCaseGroup();
+        judgeCaseGroup.setId(SeqUtil.next(BaseSequenceEnum.JUDGE_CASE_GROUP_ID.getName()));
+        judgeCaseGroup.setUserId(loginUser.getId());
+        judgeCaseGroup.setQuestionId(questionId);
+        log.info("addJudgeCaseGroup: {}", judgeCaseGroup);
+        boolean save = this.save(judgeCaseGroup);
+        ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR);
+        return judgeCaseGroup.getId();
     }
 }

@@ -13,9 +13,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.file.Paths;;
+import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;;
 
 /**
  * 文件工具类
@@ -58,6 +58,59 @@ public final class FileUtil {
             log.error("保存文件失败,上传路径：{}",fullFilePath,e);
         }
     }
+    public static void saveFileViaSFTP(File file, String fullFilePath) throws Exception {
+        channelSftp = sftpClient.getChannelSftp();
+        // 获取文件所在的目录
+        String folderPath = Paths.get(fullFilePath).getParent().toString();
+        ensureDirectoryExists(folderPath);
+        try (InputStream inputStream = Files.newInputStream(file.toPath())) {
+            // 上传文件到远程服务器的指定路径
+            log.info("保存文件：{}", fullFilePath);
+            channelSftp.put(inputStream, fullFilePath);
+            setFilePermissions(fullFilePath, PERMISSIONS_755);
+        } catch (Exception e) {
+            log.error("保存文件失败,上传路径：{}", fullFilePath, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 将 MultipartFile 保存到本地指定路径（包括文件名）
+     *
+     * @param file      MultipartFile 文件对象
+     * @param filePath  完整的文件路径（包含目录和文件名）
+     * @throws Exception 当保存文件过程中出现异常时抛出
+     */
+    public static void saveFileToLocal(MultipartFile file, String filePath) throws Exception {
+        // 获取文件所在的目录路径
+        File destinationFile = new File(filePath);
+        File parentDir = destinationFile.getParentFile();
+
+        // 确保目标目录存在，如果不存在则创建目录
+        if (parentDir != null && !parentDir.exists()) {
+            boolean dirsCreated = parentDir.mkdirs();  // 创建目录及其父目录
+            if (dirsCreated) {
+                log.info("创建目录: {}", parentDir.getAbsolutePath());
+            } else {
+                throw new IOException("无法创建目录: " + parentDir.getAbsolutePath());
+            }
+        }
+
+        // 将 MultipartFile 写入目标文件路径
+        try (InputStream inputStream = file.getInputStream();
+             FileOutputStream fos = new FileOutputStream(destinationFile)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                fos.write(buffer, 0, bytesRead);
+            }
+            fos.flush();
+            log.info("文件 {} 已成功保存到 {}", destinationFile.getName(), destinationFile.getAbsolutePath());
+        } catch (IOException e) {
+            log.error("保存文件时发生错误: ", e);
+            throw new IOException("保存文件失败", e);
+        }
+    }
 
     /**
      * 删除远程服务器上的文件
@@ -85,6 +138,50 @@ public final class FileUtil {
     }
 
     /**
+     * 删除指定的文件或目录及其内容
+     * 如果传入的是文件路径，直接删除文件
+     * 如果传入的是目录路径，递归删除目录及其下的所有文件和子目录
+     *
+     * @param path 待删除的文件或目录路径
+     * @throws Exception 当删除过程中出现异常时抛出异常
+     */
+    public static void deleteLocalPath(String path) throws Exception {
+        File file = new File(path);
+
+        if (!file.exists()) {
+            return;  // 如果文件或目录不存在，则直接返回
+        }
+
+        if (file.isDirectory()) {
+            // 如果是目录，则递归删除目录及其下的所有文件和子目录
+            Path dirPath = file.toPath();
+            Files.walkFileTree(dirPath, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws java.io.IOException {
+                    Files.delete(file);  // 删除文件
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, java.io.IOException exc) throws java.io.IOException {
+                    Files.delete(dir);  // 删除目录
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+            log.info("{} 目录下的文件及子目录删除成功", path);
+        } else if (file.isFile()) {
+            // 如果是文件，则直接删除文件
+            boolean deleted = file.delete();
+            if (deleted) {
+                log.info("文件 {} 删除成功", path);
+            } else {
+                throw new IOException("删除文件失败: " + path);
+            }
+        } else {
+            throw new IOException("无法处理路径: " + path);
+        }
+    }
+    /**
      * 通过 SFTP 下载文件并返回 ResponseEntity<byte[]> 以供浏览器下载
      *
      * @param remoteFilePath 远程文件的完整路径
@@ -101,9 +198,40 @@ public final class FileUtil {
             log.error("文件下载失败，远程文件路径：{}", remoteFilePath, e);
             throw new BusinessException(ErrorCode.DOWNLOAD_FILE_ERROR);
         }
-
         // 使用 InputStreamResource 将文件流包装成 Resource 对象
         return new InputStreamResource(inputStream);
+    }
+
+    /**
+     * 从文件服务器中下载已存在的文件到本地
+     * @param remoteFilePath
+     * @param localFile
+     * @throws IOException
+     */
+    public static void downloadFileToExistingFileViaSFTP(String remoteFilePath, File localFile) throws IOException {
+        channelSftp = sftpClient.getChannelSftp();
+        InputStream inputStream = null;
+        log.info("下载文件：{}", remoteFilePath);
+
+        try {
+            // 获取远程文件的输入流
+            inputStream = channelSftp.get(remoteFilePath);
+        } catch (SftpException e) {
+            log.error("文件下载失败，远程文件路径：{}", remoteFilePath, e);
+            throw new BusinessException(ErrorCode.DOWNLOAD_FILE_ERROR);
+        }
+
+        // 将输入流的内容写入到本地已存在的文件中
+        try (OutputStream outputStream = Files.newOutputStream(localFile.toPath())) {
+            byte[] buffer = new byte[4096];  // 4KB 缓冲区
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+        } catch (IOException e) {
+            log.error("将文件写入本地文件时出错：{}", localFile.getAbsolutePath(), e);
+            throw new IOException("文件保存失败", e);
+        }
     }
     /**
      * 确保远程服务器的目录存在
