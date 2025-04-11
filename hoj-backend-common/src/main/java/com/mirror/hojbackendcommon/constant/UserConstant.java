@@ -24,9 +24,18 @@ public interface UserConstant {
     String ADMIN_ROLE = "admin";
 
     /**
+     * 超级管理员角色
+     */
+    String ROOT = "root";
+
+    /**
      * 被封号
      */
     String BAN_ROLE = "ban";
 
-    // endregion
+    /**
+     * 默认初始密码
+     */
+    String DEFAULT_PASSWORD = "12345678";
+
 }

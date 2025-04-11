@@ -1,11 +1,13 @@
 package com.mirror.hojbackendquestionservice.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.CommonConstant;
+import com.mirror.hojbackendcommon.constant.RedisConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
 import com.mirror.hojbackendcommon.utils.SqlUtils;
@@ -16,27 +18,33 @@ import com.mirror.hojbackendmodel.model.entity.User;
 import com.mirror.hojbackendmodel.model.vo.QuestionVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
 import com.mirror.hojbackendquestionservice.mapper.QuestionMapper;
+import com.mirror.hojbackendquestionservice.scheduler.RankSyncScheduler;
 import com.mirror.hojbackendquestionservice.service.QuestionService;
 import com.mirror.hojbackendquestionservice.service.QuestionSubmitService;
 import com.mirror.hojbackendserverclient.service.UserFeignClient;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.DefaultTypedTuple;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static com.mirror.hojbackendquestionservice.scheduler.RankSyncScheduler.possibleSet;
 
 /**
  * @author Mirror
  * @description 针对表【question(题目)】的数据库操作Service实现
  * @createDate 2024-06-13 10:33:08
  */
+@Slf4j
 @Service
 public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         implements QuestionService {
@@ -47,6 +55,9 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
     @Lazy
     @Resource
     private QuestionSubmitService questionSubmitService;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
     /**
      * 校验题目是否合法
      *
@@ -175,19 +186,20 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
             if (loginUser == null) {
                 throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
             }
-            Set<Long> questionIds = questionList.stream().map(Question::getId).collect(Collectors.toSet());
-            QueryWrapper<QuestionSubmit> queryWrapper = new QueryWrapper<>();
-            queryWrapper.select("questionId", "MAX(score) AS score")
-                    .in("questionId", questionIds)
-                    .eq("userId", loginUser.getId())
-                    .groupBy("questionId");
+            List<Long> questionIds = questionList.stream().map(Question::getId).collect(Collectors.toList());
+            Map<Long, Integer> highestScoreMap = userFeignClient.getUserHighestScores(loginUser.getId(), questionIds);
+//            QueryWrapper<QuestionSubmit> queryWrapper = new QueryWrapper<>();
+//            queryWrapper.select("questionId", "MAX(score) AS score")
+//                    .in("questionId", questionIds)
+//                    .eq("userId", loginUser.getId())
+//                    .groupBy("questionId");
 
-            List<Map<String, Object>> result = questionSubmitService.listMaps(queryWrapper);
-            Map<Long, Integer> highestScoreMap = result.stream()
-                    .collect(Collectors.toMap(
-                            map -> (Long) map.get("questionId"),
-                            map -> (Integer) map.get("score")== null ? -1 : (Integer) map.get("score") // 默认值 -1,表示未提交过
-                    ));
+//            List<Map<String, Object>> result = questionSubmitService.listMaps(queryWrapper);
+//            Map<Long, Integer> highestScoreMap = result.stream()
+//                    .collect(Collectors.toMap(
+//                            map -> (Long) map.get("questionId"),
+//                            map -> (Integer) map.get("score")== null ? -1 : (Integer) map.get("score") // 默认值 -1,表示未提交过
+//                    ));
             questionVOList.forEach(item ->{
                 item.setHistoricalScore(highestScoreMap.getOrDefault(item.getId(), -1));
             });
@@ -195,6 +207,66 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
 
         questionVOPage.setRecords(questionVOList);
         return questionVOPage;
+    }
+
+    @Override
+    public void fullSyncRedisRank() {
+        //1.获取数据库中最高提交量的题目
+        Integer maxSubmitNum = this.baseMapper.selectMaxSubmitNum();
+        if (maxSubmitNum == null || maxSubmitNum == 0) return;
+        //2.根据当日提交量和最高提交量生成筛选条
+        int todaySubmitCount = (int) Optional.ofNullable(redisTemplate.opsForValue().get(RedisConstant.TODAY_SUBMIT_COUNT))
+                .orElse(RankSyncScheduler.minCount);
+        todaySubmitCount = Math.max(todaySubmitCount,RankSyncScheduler.minCount);
+        //3.获得备选序列列表
+        int threshold = maxSubmitNum - todaySubmitCount;
+        LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(Question::getId, Question::getSubmitNum) // 只查询必要字段
+                .ge(Question::getSubmitNum, threshold)          // submit_num >= threshold
+                .orderByDesc(Question::getSubmitNum);           // 按提交量降序
+        List<Map<String, Object>> result = this.listMaps(wrapper);
+        //4.写入redis的ZSet
+//        ZSetOperations<String, Object> zSetOperations = redisTemplate.opsForZSet();
+        // 1. 准备ZSet操作对象
+        ZSetOperations<String, Object> zSet = redisTemplate.opsForZSet();
+        String redisKey = RedisConstant.HOT_QUESTION_RANK;
+
+        // 2. 创建批量操作集合（推荐批量操作提升性能）
+        Set<ZSetOperations.TypedTuple<Object>> tuples = new HashSet<>();
+        possibleSet.clear();
+        // 3. 遍历处理结果集
+        result.forEach(item -> {
+            // 获取数据库字段值（注意字段名是下划线格式）
+            Object idObj = item.get("id");
+            Object submitNumObj = item.get("submitNum");
+            // 空值校验
+            if (idObj == null || submitNumObj == null) {
+                log.warn("无效数据记录: {}", item);
+                return;
+            }
+            try {
+                // 类型转换
+                String member = idObj.toString();
+                possibleSet.add((Long) idObj);
+                double score = Double.parseDouble(submitNumObj.toString());
+                // 构建写入对象
+                tuples.add(new DefaultTypedTuple<>(member, score));
+            } catch (NumberFormatException e) {
+                log.error("数值转换失败: ID={}, SubmitNum={}", idObj, submitNumObj);
+            }
+        });
+        if (!tuples.isEmpty()) {
+            // 先清空旧数据
+            redisTemplate.delete(redisKey);
+            // 批量写入新数据
+            zSet.add(redisKey, tuples);
+            // 设置24小时过期时间
+            redisTemplate.expire(redisKey, 24, TimeUnit.HOURS);
+            log.info("成功同步热门题目数据 {} 条", tuples.size());
+        } else {
+            log.warn("未找到符合条件的候选题目");
+        }
+        redisTemplate.opsForValue().set(RedisConstant.TODAY_SUBMIT_COUNT,0);
     }
 }
 

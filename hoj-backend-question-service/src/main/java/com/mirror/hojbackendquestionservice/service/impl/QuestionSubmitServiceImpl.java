@@ -13,6 +13,7 @@ import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendcommon.utils.SqlUtils;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitAddRequest;
 import com.mirror.hojbackendmodel.model.dto.questionSubmit.QuestionSubmitQueryRequest;
+import com.mirror.hojbackendmodel.model.dto.userQuestion.UserQuestionQueryRequest;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.entity.User;
@@ -29,9 +30,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import static com.mirror.hojbackendquestionservice.scheduler.RankSyncScheduler.possibleSet;
 import javax.annotation.Resource;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -55,13 +59,14 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     private QuestionService questionService;
 
     @Resource
-    private UserFeignClient userService;
+    private UserFeignClient userFeignClient;
 
     @Resource
     private MyMessageProducer myMessageProducer;
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+
 
     /**
      * 题目提交
@@ -104,9 +109,27 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (!save) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目提交失败");
         }
-        redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit, 3, TimeUnit.MINUTES);
+        // 注册事务同步回调
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        // 事务提交后执行
+                        cacheAndSendMessage(questionSubmit.getId(), questionSubmit);
+                    }
+                }
+        );
+        //redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmit.getId(), questionSubmit, 3, TimeUnit.MINUTES);
         Long questionSubmitId = questionSubmit.getId();
-        myMessageProducer.sendMessage("code_exchange", "my_routingKey", String.valueOf(questionSubmitId));
+        ZSetOperations<String, Object> zSetOperations = redisTemplate.opsForZSet();
+        Long questionId = question.getId();
+        //当日提交数+1
+        redisTemplate.opsForValue().increment(RedisConstant.TODAY_SUBMIT_COUNT,1);
+        //
+        if(possibleSet.contains(question.getId())){
+            zSetOperations.incrementScore(RedisConstant.HOT_QUESTION_RANK,questionId.toString(),1.0);
+        }
+//        myMessageProducer.sendMessage("code_exchange", "my_routingKey", String.valueOf(questionSubmitId));
 //        CompletableFuture.runAsync(() -> {
 //             异步执行判题
 //            judgeService.doJudge(questionSubmitId);
@@ -114,6 +137,28 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         return questionSubmitId;
     }
 
+    // 独立方法处理缓存和消息
+    private void cacheAndSendMessage(Long submitId, QuestionSubmit submit) {
+        try {
+            // 1. 设置Redis缓存
+            redisTemplate.opsForValue().set(
+                    RedisConstant.QUESTION_SUBMIT_PREFIX + submitId,
+                    submit,
+                    3,
+                    TimeUnit.MINUTES
+            );
+
+            // 2. 发送消息
+            myMessageProducer.sendMessage(
+                    "code_exchange",
+                    "my_routingKey",
+                    String.valueOf(submitId)
+            );
+        } catch (Exception e) {
+            log.error("消息发送失败，submitId={}", submitId, e);
+            // 添加补偿逻辑（如记录失败ID，定时任务重试）
+        }
+    }
     /**
      * 获取查询包装类（用户根据哪些字段查询，根据前端传来的请求对象，得到mybatis 框架支持的查询QueryWrapper 类）
      *
@@ -163,8 +208,8 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
             questionSubmitSubmitVO.setCode(null);
         }
         if (withRelatedData) {
-            User user = userService.getById(questionSubmit.getUserId());
-            questionSubmitSubmitVO.setUserVO(userService.getUserVO(user));
+            User user = userFeignClient.getById(questionSubmit.getUserId());
+            questionSubmitSubmitVO.setUserVO(userFeignClient.getUserVO(user));
 
             Question question = questionService.getById(questionSubmit.getQuestionId());
             questionSubmitSubmitVO.setQuestionVO(questionService.getQuestionVO(question, null));
@@ -175,41 +220,36 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     /**
      * 根据查询条件获取问题提交的分页数据。
      *
-     * @param questionSubmitSubmitPage 问题提交的分页对象，包含查询结果集。
+     * @param questionSubmitPage 问题提交的分页对象，包含查询结果集。
      * @param loginUser                当前登录用户。
      * @return 返回处理后的分页数据对象，包含用户信息丰富的问题提交数据。
      */
     @Override
-    public Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitSubmitPage, User loginUser) {
+    public Page<QuestionSubmitVO> getQuestionSubmitVOPage(Page<QuestionSubmit> questionSubmitPage, User loginUser) {
         // 获取当前页的问题提交列表
-        List<QuestionSubmit> questionSubmitSubmitList = questionSubmitSubmitPage.getRecords();
+        List<QuestionSubmit> questionSubmitList = questionSubmitPage.getRecords();
 
         // 初始化问题提交的VO分页对象
-        Page<QuestionSubmitVO> questionSubmitSubmitVOPage = new Page<>(questionSubmitSubmitPage.getCurrent(), questionSubmitSubmitPage.getSize(), questionSubmitSubmitPage.getTotal());
+        Page<QuestionSubmitVO> questionSubmitVOPage = new Page<>(questionSubmitPage.getCurrent(), questionSubmitPage.getSize(), questionSubmitPage.getTotal());
 
         // 如果当前页的问题提交列表为空，则直接返回空的分页对象
-        if (CollUtil.isEmpty(questionSubmitSubmitList)) {
-            return questionSubmitSubmitVOPage;
+        if (CollUtil.isEmpty(questionSubmitList)) {
+            return questionSubmitVOPage;
         }
-        List<QuestionSubmitVO> questionSubmitVOList = questionSubmitSubmitList.stream()
-                .map(questionSubmitSubmit -> getQuestionSubmitVO(questionSubmitSubmit, loginUser, true, false))
-                .collect(Collectors.toList());
-        questionSubmitSubmitVOPage.setRecords(questionSubmitVOList);
-//        return questionSubmitSubmitVOPage;
-//        // 统一获取所有问题提交的用户ID，用于后续批量查询用户信息
+        // 统一获取所有问题提交的用户ID，用于后续批量查询用户信息
         // 1. 关联查询用户信息和题目信息
-        Set<Long> userIdSet = questionSubmitSubmitList
+        Set<Long> userIdSet = questionSubmitList
                 .stream()
                 .map(QuestionSubmit::getUserId)
                 .collect(Collectors.toSet());
 
-        Set<Long> questionIdSet = questionSubmitSubmitList
+        Set<Long> questionIdSet = questionSubmitList
                 .stream()
                 .map(QuestionSubmit::getQuestionId)
                 .collect(Collectors.toSet());
 
         // 根据用户ID集合查询用户信息，并按用户ID分组
-        Map<Long, List<User>> userListMap = userService.listByIds(userIdSet)
+        Map<Long, List<User>> userListMap = userFeignClient.listByIds(userIdSet)
                 .stream()
                 .collect(Collectors.groupingBy(User::getId));
 
@@ -220,10 +260,10 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
 
         // 将问题提交实体转换为VO对象，并填充用户信息
         // 填充信息
-        List<QuestionSubmitVO> questionSubmitSubmitVOList = questionSubmitSubmitList.stream().map(questionSubmitSubmit -> {
-            QuestionSubmitVO questionSubmitSubmitVO = QuestionSubmitVO.objToVo(questionSubmitSubmit);
-            Long userId = questionSubmitSubmit.getUserId();
-            Long questionId = questionSubmitSubmit.getQuestionId();
+        List<QuestionSubmitVO> questionSubmitVOList = questionSubmitList.stream().map(questionSubmit -> {
+            QuestionSubmitVO questionSubmitVO = getQuestionSubmitVO(questionSubmit, loginUser, true, false);
+            Long userId = questionSubmit.getUserId();
+            Long questionId = questionSubmit.getQuestionId();
             User user = null;
             Question question = null;
             // 如果用户ID对应的用户列表不为空，则取第一个用户（因为用户ID应该是唯一的，这里简化了处理）
@@ -234,34 +274,42 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
                 question = questionListMap.get(questionId).get(0);
             }
             // 通过用户服务将用户实体转换为VO对象，并设置到问题提交VO中
-            questionSubmitSubmitVO.setUserVO(userService.getUserVO(user));
-            questionSubmitSubmitVO.setQuestionVO(questionService.getQuestionVO(question, null));
-            return questionSubmitSubmitVO;
+            questionSubmitVO.setUserVO(userFeignClient.getUserVO(user));
+            questionSubmitVO.setQuestionVO(questionService.getQuestionVO(question, null));
+            return questionSubmitVO;
         }).collect(Collectors.toList());
 
         // 设置处理后的VO列表到分页对象中
-        questionSubmitSubmitVOPage.setRecords(questionSubmitSubmitVOList);
+        questionSubmitVOPage.setRecords(questionSubmitVOList);
 
         // 返回处理后的分页数据对象
-        return questionSubmitSubmitVOPage;
+        return questionSubmitVOPage;
     }
 
     /**
      * 校验当前登录用户有无权限查看判题记录详情信息
-     * 仅限记录提交者、管理员、已经通过当前题目的用户（TODO）
+     * 仅限记录提交者、管理员、已经通过当前题目的用户
      *
      * @param questionSubmit
      * @param loginUser
-     * @return
+     * @return ture:有权限 ; false:无权限
      */
     @Override
     public Boolean isAuthorizedToViewDetail(QuestionSubmit questionSubmit, User loginUser) {
-        Long userId = questionSubmit.getUserId();
-        if (!userService.isAdmin(loginUser) && !Objects.equals(userId, loginUser.getId())) {
-            return false;
+        //TODO 后续redis改造
+        //FIXME 判断当前用户是否通过该题
+        Long questionId = questionSubmit.getQuestionId();
+        UserQuestionQueryRequest request = new UserQuestionQueryRequest();
+        request.setUserId(loginUser.getId());
+        request.setQuestionId(questionId);
+        if (userFeignClient.isAcceptedQuestion(request)) {
+            //用户通过该题
+            return true;
         }
-        // TODO 判断当前用户是否通过该题
-        return true;
+        //判断是否为管理员或本人提交
+        Long userId = questionSubmit.getUserId();
+        return userFeignClient.isAdmin(loginUser) || Objects.equals(userId, loginUser.getId());
+
     }
 
     @Override
@@ -274,15 +322,15 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         Map<String, Object> statistics = this.getBaseMapper().getOtherStatistics(questionId);
         log.info("statistics: {}", statistics);
         Map<String, Long> scoreMap = new LinkedHashMap<>();
-        if(CollectionUtil.isEmpty(statistics) || CollectionUtil.isEmpty(scoreDistribution)){
-            return  Collections.emptyMap();
+        if (CollectionUtil.isEmpty(statistics) || CollectionUtil.isEmpty(scoreDistribution)) {
+            return Collections.emptyMap();
         }
-        for(Map<String,Object> subMap: scoreDistribution){
+        for (Map<String, Object> subMap : scoreDistribution) {
             String scoreRange = String.valueOf(subMap.get("score_range"));
-            long count = (Long)subMap.get("count");
-            scoreMap.put(scoreRange,count);
+            long count = (Long) subMap.get("count");
+            scoreMap.put(scoreRange, count);
         }
-        log.info("scoreMap: {}",scoreMap);
+        log.info("scoreMap: {}", scoreMap);
         // 最大段
         String maxSegment = scoreMap.entrySet().stream()
                 .max(Map.Entry.comparingByValue())

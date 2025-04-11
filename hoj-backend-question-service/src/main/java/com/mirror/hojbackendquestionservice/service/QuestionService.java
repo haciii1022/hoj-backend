@@ -50,4 +50,9 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, Boolean isWithRelatedData, HttpServletRequest request);
+
+    /**
+     * 全量更新redis热门题目排行榜数据
+     */
+    void fullSyncRedisRank();
 }

@@ -7,5 +7,9 @@ package com.mirror.hojbackendcommon.constant;
 public interface RedisConstant {
     String QUESTION_SUBMIT_PREFIX =  "questionSubmit:";
 
+    String HOT_QUESTION_RANK = "hot_questions_rank";
+
+    String TODAY_SUBMIT_COUNT = "today_submit_count";
+
 }
 

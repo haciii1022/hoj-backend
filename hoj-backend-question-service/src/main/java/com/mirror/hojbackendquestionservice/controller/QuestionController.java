@@ -35,6 +35,7 @@ import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
 import com.mirror.hojbackendmodel.model.vo.JudgeCaseGroupVO;
 import com.mirror.hojbackendmodel.model.vo.QuestionSubmitVO;
 import com.mirror.hojbackendmodel.model.vo.QuestionVO;
+import com.mirror.hojbackendmodel.model.vo.UserRankVO;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseFileService;
 import com.mirror.hojbackendquestionservice.service.JudgeCaseGroupService;
 import com.mirror.hojbackendquestionservice.service.QuestionService;
@@ -59,9 +60,9 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 题目接口
@@ -273,6 +274,11 @@ public class QuestionController {
                                                                HttpServletRequest request) {
         long current = questionQueryRequest.getCurrent();
         long size = questionQueryRequest.getPageSize();
+        User loginUser = userFeignClient.getLoginUser(request);
+        String userRole = loginUser.getUserRole();
+        if(userRole.equals(UserConstant.ADMIN_ROLE)||userRole.equals(UserConstant.ROOT)){
+            questionQueryRequest.setIncludeHiddenQuestions(true);
+        }
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         Page<Question> questionPage = questionService.page(new Page<>(current, size),
@@ -551,4 +557,28 @@ public class QuestionController {
         return ResultUtils.success(SeqUtil.getNextValue(BaseSequenceEnum.QUESTION_ID.getName()));
     }
 
+    /**
+     * 获取热门题目排行榜前五名
+     * 若过题量相同，按照通过率降序排序
+     * @return
+     */
+    @GetMapping("/rank/top5")
+    public BaseResponse<List<Question>> getTop5Rank() {
+        // 1. 从ZSET获取前5用户ID
+        Set<Object> questionIds = redisTemplate.opsForZSet()
+                .reverseRange(RedisConstant.HOT_QUESTION_RANK, 0, 4);
+
+        if (questionIds == null || questionIds.isEmpty()) {
+            return ResultUtils.success(Collections.emptyList());
+        }
+        Set<Long> longIds = new HashSet<>();
+        questionIds.forEach(item -> {
+            longIds.add(Long.parseLong(item.toString()));
+        });
+        List<Question> list = questionService.lambdaQuery()
+                .in(Question::getId, longIds)
+                .orderByDesc(Question::getSubmitNum)
+                .list();
+        return ResultUtils.success(list);
+    }
 }

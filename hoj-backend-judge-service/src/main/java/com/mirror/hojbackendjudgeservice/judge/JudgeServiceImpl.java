@@ -1,7 +1,6 @@
 package com.mirror.hojbackendjudgeservice.judge;
 
 import cn.hutool.json.JSONUtil;
-import com.alibaba.excel.Empty;
 import com.mirror.hojbackendcommon.common.ErrorCode;
 import com.mirror.hojbackendcommon.constant.FileConstant;
 import com.mirror.hojbackendcommon.constant.RedisConstant;
@@ -15,20 +14,22 @@ import com.mirror.hojbackendmodel.model.codesandbox.ExecuteCodeResponse;
 import com.mirror.hojbackendmodel.model.codesandbox.JudgeInfo;
 import com.mirror.hojbackendmodel.model.dto.file.JudgeCaseFileQueryRequest;
 import com.mirror.hojbackendmodel.model.dto.question.JudgeConfig;
+import com.mirror.hojbackendmodel.model.dto.userQuestion.UserQuestionAddRequest;
 import com.mirror.hojbackendmodel.model.entity.Question;
 import com.mirror.hojbackendmodel.model.entity.QuestionSubmit;
 import com.mirror.hojbackendmodel.model.enums.JudgeInfoMessageEnum;
 import com.mirror.hojbackendmodel.model.enums.QuestionSubmitStatusEnum;
 import com.mirror.hojbackendserverclient.service.QuestionFeignClient;
+import com.mirror.hojbackendserverclient.service.UserFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * @author Mirror
@@ -37,8 +38,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class JudgeServiceImpl implements JudgeService {
+
     @Resource
     QuestionFeignClient questionFeignClient;
+
+    @Resource
+    UserFeignClient userFeignClient;
 
     @Value("${codesandbox.type:remote}")
     private String type;
@@ -50,6 +55,7 @@ public class JudgeServiceImpl implements JudgeService {
     private RedisTemplate<String, Object> redisTemplate;
 
     @Override
+    @Transactional
     public QuestionSubmit doJudge(Long questionSubmitId) {
         QuestionSubmit questionSubmit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
         if (questionSubmit == null) {
@@ -83,7 +89,7 @@ public class JudgeServiceImpl implements JudgeService {
 //        List<String> inputList = judgeCaseList.stream().map(JudgeCase::getInput).collect(Collectors.toList());
         String judgeConfigStr = question.getJudgeConfig();
         JudgeConfig judgeConfig = JSONUtil.toBean(judgeConfigStr, JudgeConfig.class);
-        
+
         //  获取inputFilePathList
         JudgeCaseFileQueryRequest request = new JudgeCaseFileQueryRequest();
         request.setQuestionId(questionId);
@@ -105,19 +111,24 @@ public class JudgeServiceImpl implements JudgeService {
         JudgeInfo judgeInfo;
         JudgeContext judgeContext = new JudgeContext();
         ExecuteCodeResponse executeCodeResponse = codeSandbox.executeCode(executeCodeRequest);
+        UserQuestionAddRequest userQuestionAddRequest = new UserQuestionAddRequest();
+        userQuestionAddRequest.setUserId(questionSubmit.getUserId());
+        userQuestionAddRequest.setQuestionId(questionId);
+        userQuestionAddRequest.setSubmitId(questionSubmitId);
         //如果沙箱执行失败，直接返回
-        if(Objects.equals(executeCodeResponse.getStatus(), QuestionSubmitStatusEnum.FAILED.getValue())) {
+        if (Objects.equals(executeCodeResponse.getStatus(), QuestionSubmitStatusEnum.FAILED.getValue())) {
             judgeInfo = new JudgeInfo();
             judgeInfo.setScore(0);
+            userQuestionAddRequest.setScore(0);
             judgeInfo.setDetail(executeCodeResponse.getDetail());
             if (executeCodeResponse.getMessage().equals(JudgeInfoMessageEnum.COMPILE_ERROR.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
                 judgeInfo.setMessage(JudgeInfoMessageEnum.COMPILE_ERROR.getText());
-            }else{
+            } else {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
                 judgeInfo.setMessage(JudgeInfoMessageEnum.SYSTEM_ERROR.getText());
             }
-        }else{
+        } else {
             //根据沙箱的执行结果，设置题目的判题状态和信息
             judgeContext.setJudgeInfoList(executeCodeResponse.getJudgeInfoList());
             judgeContext.setJudgeCaseinputFilePathList(judgeCaseInputFilePathList);
@@ -130,7 +141,9 @@ public class JudgeServiceImpl implements JudgeService {
 //            judgeContext.setInputList(inputList);
             // FIXME 总判题信息，后续需要拼接个判题子信息
             judgeInfo = judgeManager.doJudge(judgeContext);
-            questionSubmitUpdate.setScore(judgeContext.getQuestionSubmit().getScore());
+            Integer score = judgeContext.getQuestionSubmit().getScore();
+            questionSubmitUpdate.setScore(score);
+            userQuestionAddRequest.setScore(score);
             //在数据库中更新判题状态
             if (Objects.equals(judgeInfo.getMessage(), JudgeInfoMessageEnum.ACCEPTED.getText())) {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
@@ -146,6 +159,7 @@ public class JudgeServiceImpl implements JudgeService {
                 questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.FAILED.getValue());
             }
         }
+
         // FIXME questionSubmit.judgeInfo设置成返回的 judgeInfo+judgeInfoList,第一个为总judgeInfo
         List<JudgeInfo> judgeInfoList = new ArrayList<>();
         judgeInfoList.add(judgeInfo);
@@ -155,9 +169,17 @@ public class JudgeServiceImpl implements JudgeService {
         if (!update) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "题目状态更新错误");
         }
+        Long result = userFeignClient.addAcceptedRecord(userQuestionAddRequest);
+        if (result < 0) {
+            log.error("用户通过题目数据插入失败，请查看日志");
+        } else if (result == 0) {
+            log.info("该用户非首次尝试该题，更新user_question_statistics数据成功");
+        }else {
+            log.info("该用户首次尝试该题，新增user_question_statistics数据成功");
+        }
         QuestionSubmit submit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
         redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId,
-                submit,3, TimeUnit.MINUTES);
+                submit, 3, TimeUnit.MINUTES);
         return submit;
     }
 
@@ -176,7 +198,7 @@ public class JudgeServiceImpl implements JudgeService {
         }
         QuestionSubmit submit = questionFeignClient.getQuestionSubmitById(questionSubmitId);
         redisTemplate.opsForValue().set(RedisConstant.QUESTION_SUBMIT_PREFIX + questionSubmitId,
-                submit,3, TimeUnit.MINUTES);
+                submit, 3, TimeUnit.MINUTES);
         return submit;
     }
 }

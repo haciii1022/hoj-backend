@@ -60,7 +60,14 @@ public class AuthInterceptor {
         // 必须有管理员权限
         if (UserRoleEnum.ADMIN.equals(mustRoleEnum)) {
             // 用户没有管理员权限，拒绝
-            if (!UserRoleEnum.ADMIN.equals(userRoleEnum)) {
+            if (!UserRoleEnum.ADMIN.equals(userRoleEnum) &&! UserRoleEnum.ROOT.equals(userRoleEnum)) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+            }
+        }
+        // 必须有超级管理员权限
+        if (UserRoleEnum.ROOT.equals(mustRoleEnum)) {
+            // 用户没有管理员权限，拒绝
+            if (!UserRoleEnum.ROOT.equals(userRoleEnum)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             }
         }

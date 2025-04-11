@@ -31,5 +31,15 @@ public class UserUpdateMyRequest implements Serializable {
      */
     private String userProfile;
 
+    /**
+     * 用户角色
+     */
+    private String userRole;
+
+    /**
+     * 是否重置密码
+     */
+    private Boolean isResetPassword;
+
     private static final long serialVersionUID = 1L;
 }

@@ -30,6 +30,7 @@ public class MyMessageConsumer {
         } catch (Exception e) {
             // 失败提交得做错误返回
             log.warn("消息队列接收异常：{}",e.toString());
+            log.error("消息队列接收异常22 ",e);
             judgeService.handleErrorJudge(questionSubmitId);
             channel.basicNack(deliveryTag, false, false);
         }

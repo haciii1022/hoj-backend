@@ -2,6 +2,7 @@ package com.mirror.hojbackendquestionservice.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.mirror.hojbackendmodel.model.entity.Question;
+import org.apache.ibatis.annotations.Select;
 
 
 /**
@@ -11,7 +12,8 @@ import com.mirror.hojbackendmodel.model.entity.Question;
 * @Entity com.mirror.hoj.model.entity.Question
 */
 public interface QuestionMapper extends BaseMapper<Question> {
-
+    @Select("SELECT MAX(submitNum) FROM question")
+    Integer selectMaxSubmitNum();
 }
 
 

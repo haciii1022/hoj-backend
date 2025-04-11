@@ -19,7 +19,7 @@ create table if not exists user
     userName     varchar(256)                           null comment '用户昵称',
     userAvatar   varchar(1024)                          null comment '用户头像',
     userProfile  varchar(512)                           null comment '用户简介',
-    userRole     varchar(256) default 'user'            not null comment '用户角色：user/admin/ban',
+    userRole     varchar(256) default 'user'            not null comment '用户角色：user/admin/root/ban',
     createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
     updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete     tinyint      default 0                 not null comment '是否删除',
@@ -67,7 +67,6 @@ create table if not exists question_submit
 ) comment '题目提交' collate = utf8mb4_general_ci;
 
 
-
 -- 帖子表
 create table if not exists post
 (
@@ -109,31 +108,33 @@ create table if not exists post_favour
 ) comment '帖子收藏' collate = utf8mb4_general_ci;
 
 
-CREATE TABLE `sequence` (
-  `name` VARCHAR(50) NOT NULL,
-  `value` BIGINT NOT NULL,
-  `increment_step` INT NOT NULL DEFAULT 1,
-  PRIMARY KEY (`name`)
-)comment '序列表' collate = utf8mb4_general_ci;
+CREATE TABLE `sequence`
+(
+    `name`           VARCHAR(50) NOT NULL,
+    `value`          BIGINT      NOT NULL,
+    `increment_step` INT         NOT NULL DEFAULT 1,
+    PRIMARY KEY (`name`)
+) comment '序列表' collate = utf8mb4_general_ci;
 
 CREATE PROCEDURE `nextval`(IN seq_name varchar(50), OUT next_value bigint)
 BEGIN
 
-  -- 启动事务
-  START TRANSACTION;
+    -- 启动事务
+    START TRANSACTION;
 
-  -- 更新序列值
-  UPDATE `sequence`
-  SET `value` = `value` + `increment_step`
-  WHERE `name` = seq_name;
+    -- 更新序列值
+    UPDATE `sequence`
+    SET `value` = `value` + `increment_step`
+    WHERE `name` = seq_name;
 
-  -- 获取更新后的值
-  SELECT `value` INTO next_value
-  FROM `sequence`
-  WHERE `name` = seq_name;
+    -- 获取更新后的值
+    SELECT `value`
+    INTO next_value
+    FROM `sequence`
+    WHERE `name` = seq_name;
 
-  -- 提交事务
-  COMMIT;
+    -- 提交事务
+    COMMIT;
 end;
 
 
@@ -141,10 +142,11 @@ CREATE PROCEDURE `curval`(IN seq_name varchar(50), OUT cur_value bigint)
 BEGIN
 
 
-  -- 获取更新后的值
-  SELECT `value` + `increment_step` INTO cur_value
-  FROM `sequence`
-  WHERE `name` = seq_name;
+    -- 获取更新后的值
+    SELECT `value` + `increment_step`
+    INTO cur_value
+    FROM `sequence`
+    WHERE `name` = seq_name;
 
 end;
 
@@ -152,12 +154,12 @@ end;
 
 create table if not exists judge_case_group
 (
-    id           bigint auto_increment comment 'id' primary key,
-    questionId   bigint                                 not null comment '题目 id',
-    userId       bigint                                 not null comment '创建用户 id',
-    createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete     tinyint      default 0                 not null comment '是否删除',
+    id         bigint auto_increment comment 'id' primary key,
+    questionId bigint                             not null comment '题目 id',
+    userId     bigint                             not null comment '创建用户 id',
+    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete   tinyint  default 0                 not null comment '是否删除',
     index idx_questionId (questionId),
     index idx_userId (userId)
 ) comment '测试用例组' collate = utf8mb4_general_ci;
@@ -165,21 +167,56 @@ create table if not exists judge_case_group
 
 create table if not exists judge_case_file
 (
-    id           bigint auto_increment comment 'id' primary key,
-    groupId      bigint                                 not null comment '测试用例组 id',
-    url          varchar(256)                           null comment '文件url',
-    type         tinyint                                not null comment '0:in 1:out',
-    fileName     varchar(128)                           null comment '文件名',
-    fileFolder   varchar(128)                           null comment '文件夹位置',
-    userId       bigint                                 not null comment '创建用户 id',
-    createTime   datetime     default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete     tinyint      default 0                 not null comment '是否删除',
+    id         bigint auto_increment comment 'id' primary key,
+    groupId    bigint                             not null comment '测试用例组 id',
+    url        varchar(256)                       null comment '文件url',
+    type       tinyint                            not null comment '0:in 1:out',
+    fileName   varchar(128)                       null comment '文件名',
+    fileFolder varchar(128)                       null comment '文件夹位置',
+    userId     bigint                             not null comment '创建用户 id',
+    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete   tinyint  default 0                 not null comment '是否删除',
     index idx_userId (userId)
 ) comment '测试用例文件' collate = utf8mb4_general_ci;
 
-INSERT INTO sequence (name, value, increment_step)VALUES ('question_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
-INSERT INTO sequence (name, value, increment_step)VALUES ('user_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
-INSERT INTO sequence (name, value, increment_step)VALUES ('question_submit_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
-INSERT INTO sequence (name, value, increment_step)VALUES ('judge_case_group_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
-INSERT INTO sequence (name, value, increment_step)VALUES ('judge_case_file_id', 1, 1) ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+CREATE TABLE IF NOT EXISTS user_question_statistics
+(
+    id            BIGINT AUTO_INCREMENT COMMENT '主键' PRIMARY KEY,
+    userId        BIGINT                             NOT NULL COMMENT '用户ID（关联user表）',
+    questionId    BIGINT                             NOT NULL COMMENT '题目ID（关联question表）',
+    firstAcceptedId BIGINT COMMENT '首次通过的提交ID（关联question_submit表）',
+    highestScore  INT      COMMENT '历史最高分',
+    acceptedNum   INT      COMMENT '通过次数',
+    submitNum     INT      COMMENT '提交次数',
+    createTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '首次通过时间',
+    updateTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    isDelete      TINYINT  DEFAULT 0                 NOT NULL COMMENT '是否删除',
+    UNIQUE INDEX idx_user_question (userId, questionId), -- 防止重复记录
+    INDEX idx_userId (userId),
+    INDEX idx_questionId (questionId)
+) COMMENT '用户通过题目记录表' COLLATE = utf8mb4_general_ci;
+
+INSERT INTO sequence (name, value, increment_step)
+VALUES ('question_id', 1, 1)
+ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+
+INSERT INTO sequence (name, value, increment_step)
+VALUES ('user_id', 1, 1)
+ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+
+INSERT INTO sequence (name, value, increment_step)
+VALUES ('question_submit_id', 1, 1)
+ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+
+INSERT INTO sequence (name, value, increment_step)
+VALUES ('judge_case_group_id', 1, 1)
+ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+
+INSERT INTO sequence (name, value, increment_step)
+VALUES ('judge_case_file_id', 1, 1)
+ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);
+
+INSERT INTO sequence (name, value, increment_step)
+VALUES ('user_accepted_question', 1, 1)
+ON DUPLICATE KEY UPDATE increment_step = VALUES(increment_step);

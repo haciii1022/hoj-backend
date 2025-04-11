@@ -1,6 +1,5 @@
 package com.mirror.hojbackenduserservice.controller;
 
-import com.alibaba.cloud.commons.io.FileUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mirror.hojbackendcommon.annotation.AuthCheck;
 import com.mirror.hojbackendcommon.common.BaseResponse;
@@ -12,8 +11,6 @@ import com.mirror.hojbackendcommon.constant.UserConstant;
 import com.mirror.hojbackendcommon.exception.BusinessException;
 import com.mirror.hojbackendcommon.exception.ThrowUtils;
 import com.mirror.hojbackendcommon.utils.FileUtil;
-import com.mirror.hojbackendcommon.utils.OssUtil;
-import com.mirror.hojbackendcommon.utils.SeqUtil;
 import com.mirror.hojbackendmodel.model.dto.user.UserAddRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserLoginRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserQueryRequest;
@@ -21,16 +18,17 @@ import com.mirror.hojbackendmodel.model.dto.user.UserRegisterRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserUpdateMyRequest;
 import com.mirror.hojbackendmodel.model.dto.user.UserUpdateRequest;
 import com.mirror.hojbackendmodel.model.entity.User;
-import com.mirror.hojbackendmodel.model.enums.BaseSequenceEnum;
 import com.mirror.hojbackendmodel.model.vo.LoginUserVO;
+import com.mirror.hojbackendmodel.model.vo.UserRankVO;
 import com.mirror.hojbackendmodel.model.vo.UserVO;
+import com.mirror.hojbackenduserservice.service.UserQuestionStatisticsService;
 import com.mirror.hojbackenduserservice.service.UserService;
 import lombok.extern.slf4j.Slf4j;
-import net.bytebuddy.implementation.bytecode.Throw;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.DigestUtils;
-import org.springframework.util.FileSystemUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,9 +41,11 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
-import java.io.IOException;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import static com.mirror.hojbackenduserservice.manager.RankRedisManager.RANK_KEY;
+import static com.mirror.hojbackenduserservice.manager.RankRedisManager.USER_STATS_PREFIX;
 import static com.mirror.hojbackenduserservice.service.impl.UserServiceImpl.SALT;
 
 
@@ -61,6 +61,12 @@ public class UserController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private RedisTemplate redisTemplate;
+
+    @Resource
+    private UserQuestionStatisticsService userQuestionStatisticsService;
 
 //    @Resource
 //    private OSS ossClient;
@@ -190,7 +196,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @AuthCheck(mustRole = UserConstant.ROOT)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest,
                                             HttpServletRequest request) {
         if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
@@ -261,7 +267,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/list/page")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    @AuthCheck(mustRole = UserConstant.ROOT)
     public BaseResponse<Page<User>> listUserByPage(@RequestBody UserQueryRequest userQueryRequest,
                                                    HttpServletRequest request) {
         long current = userQueryRequest.getCurrent();
@@ -296,7 +302,6 @@ public class UserController {
         return ResultUtils.success(userVOPage);
     }
 
-    // endregion
 
     /**
      * 更新个人信息
@@ -315,8 +320,8 @@ public class UserController {
         User user = new User();
         BeanUtils.copyProperties(userUpdateMyRequest, user);
         user.setId(loginUser.getId());
-        String userPassword = user.getUserPassword();
-        if (StringUtils.isNotBlank(userPassword)) {
+        if (Objects.equals(userUpdateMyRequest.getIsResetPassword(),true)) {
+            String userPassword = UserConstant.DEFAULT_PASSWORD;
             String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
             user.setUserPassword(encryptPassword);
         }
@@ -324,12 +329,6 @@ public class UserController {
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
-
-//    @PostMapping("/upload")
-//    public BaseResponse<String> uploadFile(@RequestBody MultipartFile file) {
-//        String originalFilename = "93680036-49f0-4e81-bf54-d69c4225e8c7";
-//        return ResultUtils.success(OssUtil.uploadFile(file, null, FileConstant.USER_AVATAR_PREFIX));
-//    }
 
     /**
      * 更新头像(仅限当前登录用户更新)
@@ -374,4 +373,55 @@ public class UserController {
         return ResultUtils.success(true);
     }
 
+    /**
+     * 获取用户通过的题目ID列表
+     * @param userId 用户ID
+     * @return 题目ID列表
+     */
+    @GetMapping("/list/accepted")
+    public BaseResponse<List<Long>> getUserAcceptedQuestions(@RequestParam("userId") Long userId) {
+        // 参数校验
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "无效用户ID");
+        }
+
+        // 查询服务
+        List<Long> questionIds = userQuestionStatisticsService.getUserAcceptedQuestions(userId);
+        return ResultUtils.success(questionIds);
+    }
+
+    /**
+     * 获取用户过题排行榜前五名
+     * 若过题量相同，按照通过率降序排序
+     * @return
+     */
+    @GetMapping("/rank/top5")
+    public BaseResponse<List<UserRankVO>> getTop5Rank() {
+        // 1. 从ZSET获取前5用户ID
+        Set<String> userIds = redisTemplate.opsForZSet()
+                .reverseRange(RANK_KEY, 0, 4);
+
+        if (userIds == null || userIds.isEmpty()) {
+            return ResultUtils.success(Collections.emptyList());
+        }
+        // 2. 批量查询用户详情
+        List<UserRankVO> result = userIds.stream()
+                .map(userId -> {
+                    Map<Object, Object> userStats = redisTemplate.opsForHash()
+                            .entries(USER_STATS_PREFIX + userId);
+                    User user = userService.getById(userId);
+                    System.out.println(userStats.toString());
+                    return UserRankVO.builder()
+                            .userAccount(user.getUserAccount())
+                            .userName(user.getUserName())
+                            .userAvatar(user.getUserAvatar())
+                            .solvedNum(Integer.parseInt(userStats.get("solvedNum").toString()))
+                            .submitNum(Integer.parseInt(userStats.get("submitNum").toString()))
+                            .acceptedNum(Integer.parseInt(userStats.get("acceptedNum").toString()))
+                            .build();
+                })
+                .collect(Collectors.toList());
+        System.out.println(result);
+        return ResultUtils.success(result);
+    }
 }
